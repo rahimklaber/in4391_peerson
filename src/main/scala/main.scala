@@ -1,7 +1,10 @@
+import akka.actor.typed.scaladsl.AskPattern.{Askable, schedulerFromActorSystem}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
-import peer.{AddToWall, Example, PeerCmd, PeerMessage}
+import akka.util.Timeout
+import peer.{AddToWall, AddWallEntry, Example, FileRequest, FileResponse, PeerCmd, PeerMessage}
 
+import scala.concurrent.duration.DurationInt
 import scala.io.StdIn.readLine
 
 object Guardian {
@@ -16,8 +19,15 @@ object Guardian {
       while(true){
         val cmd = readLine().split(" ")
         cmd.head match {
-          case "wall-add" => peers.head ! PeerCmd(AddToWall(cmd.tail.head,cmd.tail.tail.head))
+          case "wall-add" => peers.head ! AddWallEntry(cmd.tail.reduce((a,b) => a + " " + b))
           case "inspect-dht" => dht.LocalDht._map.foreach(e => println(e._1))
+          case "get-file" => {
+            implicit val system = context.system
+            implicit val timeout : Timeout = 1.seconds
+            val future = peers.head.ask(ref => FileRequest(cmd.tail.head,0,ref))
+            implicit  val ec = system.executionContext
+            future.onComplete(println)
+          }
           case _ => ()
         }
       }

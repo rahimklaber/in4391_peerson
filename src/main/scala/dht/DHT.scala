@@ -6,4 +6,8 @@ trait DHT {
   def put(key: String, data: Any): Unit
 
   def get(key: String): Option[Any]
+
+  def append(key: String, data : Any): Unit
+
+  def getAll(key: String): Option[List[Any]]
 }

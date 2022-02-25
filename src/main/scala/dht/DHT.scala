@@ -1,6 +1,6 @@
 package dht
 
-  trait DHT {
+trait DHT {
     val local: LocalDht.type = LocalDht
 
   def put(key: String, data: Any): Unit

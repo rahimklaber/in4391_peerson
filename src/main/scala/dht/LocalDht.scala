@@ -3,7 +3,7 @@ package dht
 import scala.collection.mutable
 
 object LocalDht extends DHT{
-  private val _map : mutable.Map[String,Any] = mutable.Map()
+  val _map : mutable.Map[String,Any] = mutable.Map()
   override def put(key: String, data: Any): Unit = {
     _map += (key -> data)
   }

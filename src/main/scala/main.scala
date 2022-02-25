@@ -8,7 +8,7 @@ object Guardian {
   def apply(n: Int): Behavior[Empty] = Behaviors.setup { context =>
     var peers  : List[ActorRef[PeerMessage]]= List.empty
     (0 until n).foreach(i => {
-      peers = context.spawn(peer.Peer(), s"peer${i}") :: peers
+      peers = context.spawn(peer.Peer(s"${i}"), s"peer${i}") :: peers
     })
 
     // For now you can put send messages to peers here.

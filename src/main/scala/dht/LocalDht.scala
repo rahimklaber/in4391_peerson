@@ -9,4 +9,8 @@ object LocalDht extends DHT{
   }
 
   override def get(key: String): Option[Any] = _map.get(key)
+
+  override def contains(key: String): Boolean =
+    if (_map.contains(key)) true
+    else false
 }

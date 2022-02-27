@@ -8,39 +8,59 @@ import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import java.security.MessageDigest
 import java.math.BigInteger
 
-// For hashing: Based on https://stackoverflow.com/questions/46329956/how-to-correctly-generate-sha-256-checksum-for-a-string-in-scala 
-import java.math.BigInteger
-import java.security.MessageDigest
-
-
 class Peer(context: ActorContext[PeerMessage], mail: String) extends AbstractBehavior[PeerMessage](context) {
-  //Used SHA-256 because MD5 not secure (Check with linux: "echo -n "Test@test.com" | openssl dgst -sha256")
-  val hashedMail = String.format("%064x", new BigInteger(1, MessageDigest.getInstance("SHA-256").digest(mail.getBytes("UTF-8"))))
 
-  {
-    // put location in the dht with the hash being the key
-    dht.LocalDht.put(hashedMail, context.self.path.toString)
+  //Used SHA-256 because MD5 used in paper is not secure
+  private def SHA256Hash(stringToHash: String): String = {
+    String.format("%064x", new BigInteger(1, MessageDigest.getInstance("SHA-256").digest(stringToHash.getBytes("UTF-8"))));
   }
 
-  /**
-   * Get a reference to a peer from its path.
-   */
-  def getPeerRef(path: String): ActorSelection = {
+  // All Peers need a hashed mail
+  private val hashedMail = SHA256Hash(mail)
+
+  // Put location in the DHT with the hash being the key
+  dht.LocalDht.put(hashedMail, context.self.path.toString)
+
+  // Get a reference to a peer from its path.
+  private def getPeerRef(path: String): ActorSelection = {
     context.system.classicSystem.actorSelection(path)
   }
 
+  // Logic for answering the user
+  private def chatMessage(mailToContact: String, message: String, selfMail:String){
+    val dhtLookUp = dht.LocalDht.get(SHA256Hash(mailToContact))
+    dhtLookUp match {
+      case None => println(s"User: $mailToContact, not found in DHT")
+      case Some(value) => 
+        try {
+          // Looks up user and sends a message back
+          val peerRef = getPeerRef(dhtLookUp.get.asInstanceOf[String]) 
+          peerRef ! Message(selfMail,message)
+        }
+        catch { 
+          //Catches all errors if DHT has stored value, but user offline
+          case _ : Throwable => println("Could not send to user!")
+        }
+      }
+  }
 
   override def onMessage(msg: PeerMessage): Behavior[PeerMessage] = {
-    context.log.info(s"Received message $msg")
+    
+    val from = msg.nonHashedSender
+    val message = msg.message
 
+    context.log.info(s"From: $from| Message: $message")
 
     msg match {
-      case _ => this
+      // TODO: what is expected test behavior here? Does only send "I got your message" back and forth
+      case Message(nonHashedSender, message) => 
+        this.chatMessage(nonHashedSender,"I got your message",this.mail)
+        this
     }
   }
 }
 
-object Peer{
+object Peer {
   def apply(mail:String): Behavior[PeerMessage] = {
     Behaviors.setup(context => {
       new Peer(context, mail)

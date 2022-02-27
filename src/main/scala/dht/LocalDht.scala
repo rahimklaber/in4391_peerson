@@ -4,7 +4,7 @@ import scala.collection.mutable
 
 object LocalDht extends DHT{
 
-  // Map stores user in the format ["Hashed-email", ]
+  // Map stores user in the format ["Hashed-email", location]
   private val _map : mutable.Map[String,Any] = mutable.Map()
   override def put(key: String, data: Any): Unit = {
     _map += (key -> data)

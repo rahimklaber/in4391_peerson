@@ -12,7 +12,7 @@ object LocalDht extends DHT{
   override def get(key: String): Option[Any] = {
     val value = _map.get(key)
     value match {
-      case Some(List(head :: tail)) => Some(head)
+      case Some(list) => Some(list.head)
       case _ => None
     }
   }

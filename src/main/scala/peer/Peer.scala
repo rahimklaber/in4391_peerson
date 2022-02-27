@@ -1,8 +1,10 @@
 package peer
 
 import akka.actor.ActorSelection
-import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
+import akka.actor.typed.{ActorRef, Behavior}
+import akka.pattern.ask
+import akka.remote.transport.ActorTransportAdapter.AskTimeout
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -11,16 +13,18 @@ import scala.collection.mutable.ListBuffer
 import java.math.BigInteger
 import java.security.MessageDigest
 
-object FileTypes extends Enumeration{
+object FileTypes extends Enumeration {
   type FileType = Value
 
   val Index, List, FriendList, FirstName, LastName, BirthDay, City, WallIndex, WallEntry = Value
 }
-case class DhtFileEntry(value: String) // <hGUID>#<locator>#<version>
+
+case class DhtFileEntry(hGUID: String, locator: String, version: Int) // <hGUID>#<locator>#<version>
 
 trait File
 
 case class WallEntry(index: Int, text: String) extends File
+
 /**
  *
  * @param lastIndex the index of the most recent entry.
@@ -34,8 +38,13 @@ class Peer(context: ActorContext[PeerMessage], mail: String) extends AbstractBeh
 
   val WALL_INDEX_KEY = s"${hashedMail}@wi"
 
+  type callback = PeerMessage => Unit
+
+  val callBacks : mutable.Map[String,callback] = mutable.Map()
+
   // put location in the dht with the hash being the key
   files.put(WALL_INDEX_KEY, WallIndex(hashedMail, -1, ListBuffer.empty))
+  dht.LocalDht.append(WALL_INDEX_KEY, DhtFileEntry(hashedMail, context.self.path.toString, 0))
   dht.LocalDht.put(hashedMail, context.self.path.toString)
 
   def wallEntryKey(index: Int): String = s"${hashedMail}@we${index}"
@@ -47,10 +56,18 @@ class Peer(context: ActorContext[PeerMessage], mail: String) extends AbstractBeh
     val entryKey = wallEntryKey(newIndex)
     wallIndex.entries.append(entryKey)
     files.put(entryKey, WallEntry(newIndex, text))
-    dht.LocalDht.append(entryKey,DhtFileEntry(s"$hashedMail#${context.self.path}#0")) // for now assume not versioning
+    dht.LocalDht.append(entryKey, DhtFileEntry(hashedMail, context.self.path.toString, 0)) // for now assume not versioning
 
     // increment index
-    files.put(WALL_INDEX_KEY,wallIndex.copy(lastIndex = newIndex))
+    files.put(WALL_INDEX_KEY, wallIndex.copy(lastIndex = newIndex))
+  }
+
+  /**
+   * Add a file to our local storage and update the dht.
+   */
+  def addFile(fileName: String,file: File): Unit ={
+    files.put(fileName, file)
+    dht.LocalDht.append(fileName, DhtFileEntry(hashedMail, context.self.path.toString, 0)) // for now assume not versioning
   }
 
   /**
@@ -61,6 +78,7 @@ class Peer(context: ActorContext[PeerMessage], mail: String) extends AbstractBeh
   }
 
 
+
   override def onMessage(msg: PeerMessage): Behavior[PeerMessage] = {
     context.log.info(s"Received message $msg")
 
@@ -68,26 +86,40 @@ class Peer(context: ActorContext[PeerMessage], mail: String) extends AbstractBeh
     msg match {
       case AddWallEntry(text) => {
         addToWall(text)
-        this
+
       }
       case FileRequest(name,version,ref) => {
         files.get(name) match {
           case Some(value) if value.isInstanceOf[File] => ref ! FileResponse(200,name,version,Some(value.asInstanceOf[File]))
           case None => ref ! FileResponse(404,name,version,None)
         }
-        this
+
+      }
+      // If we get a response, store it locally and send it if it was requested.
+      case r@FileResponse(code,name,version,file) if code == 200 => {
+        callBacks(name)(r)
+        file match {
+          case Some(value) => addFile(name,value)
+        }
       }
       case PeerCmd(cmd) => {
         cmd match {
-          //          case AddToWall(user,text) => dht.LocalDht.put(user,Wall(user,WallItem("test",text) :: List.empty))
+          case AddToWall(user, text) => {
+            dht.LocalDht.get(user) match {
+              case Some(path: String) => getPeerRef(path) ! AddWallEntry(text)
+              case None => ()
+            }
+          }
+          case GetFile(fileName, replyTo) => dht.LocalDht.getAll(fileName) match {
+            case Some(DhtFileEntry(hGUID, locator, version) :: _) =>
+              callBacks.put(fileName,{msg => replyTo ! msg})
+              getPeerRef(locator) ! FileRequest(fileName, version, this.context.self) // actor classic kinda screws up. Instead just send a file request and then handle in explicitly
+          }
           case _ => ()
         }
-
-        this
       }
-
-      case _ => this
     }
+    this
 
 
   }

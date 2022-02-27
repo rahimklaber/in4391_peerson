@@ -22,4 +22,6 @@ case class FileResponse(code : Int,fileName : String,version : Int, file: Option
 
 trait Command
 
+case class GetFile(fileName: String, replyTo : ActorRef[PeerMessage]) extends Command
+
 case class AddToWall(user: String,text: String) extends Command

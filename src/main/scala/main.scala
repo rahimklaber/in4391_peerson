@@ -2,7 +2,7 @@ import akka.actor.typed.scaladsl.AskPattern.{Askable, schedulerFromActorSystem}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
 import akka.util.Timeout
-import peer.{AddToWall, AddWallEntry, Example, FileRequest, FileResponse, PeerCmd, PeerMessage}
+import peer.{AddToWall, AddWallEntry, Example, FileRequest, FileResponse, GetFile, PeerCmd, PeerMessage}
 
 import scala.concurrent.duration.DurationInt
 import scala.io.StdIn.readLine
@@ -20,7 +20,8 @@ object Guardian {
         val cmd = readLine().split(" ")
         cmd.head match {
           case "wall-add" => peers.head ! AddWallEntry(cmd.tail.reduce((a,b) => a + " " + b))
-          case "inspect-dht" => dht.LocalDht._map.foreach(e => println(e._1))
+          case "wall-add-remote" => peers.head ! PeerCmd(AddToWall(cmd.tail.head,cmd.tail.tail.reduce((a,b)=> a + " " + b)))
+          case "inspect-dht" => dht.LocalDht._map.foreach(e => println(e))
           case "get-file" => {
             implicit val system = context.system
             implicit val timeout : Timeout = 1.seconds
@@ -28,6 +29,14 @@ object Guardian {
             implicit  val ec = system.executionContext
             future.onComplete(println)
           }
+          case "get-file-remote" =>
+        {
+          implicit val system = context.system
+          implicit val timeout : Timeout = 10.seconds
+          val future = peers.head.ask((ref: ActorRef[Any]) => PeerCmd(GetFile(cmd.tail.head,ref)))
+          implicit  val ec = system.executionContext
+          future.onComplete(println)
+        }
           case _ => ()
         }
       }

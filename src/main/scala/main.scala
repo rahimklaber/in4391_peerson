@@ -27,7 +27,7 @@ object Guardian {
         cmd.head match {
           case "wall-add" => peers.head ! AddWallEntry(cmd.tail.reduce((a,b) => a + " " + b))
           case "wall-add-remote" => peers.head ! PeerCmd(AddToWall(cmd.tail.head,cmd.tail.tail.reduce((a,b)=> a + " " + b)))
-          //case "inspect-dht" => dht.LocalDht._map.foreach(e => println(e))
+          case "inspect-dht" => dht.LocalDht.printElements()
           case "get-file" => {
             implicit val system = context.system
             implicit val timeout : Timeout = 1.seconds

@@ -14,32 +14,31 @@ import scala.collection.mutable.ListBuffer
 import java.security.MessageDigest
 import java.math.BigInteger
 
-class Peer(context: ActorContext[PeerMessage], mail: String) extends AbstractBehavior[PeerMessage](context) {
+object FileTypes extends Enumeration {
+  type FileType = Value
 
+  val Index, List, FriendList, FirstName, LastName, BirthDay, City, WallIndex, WallEntry = Value
+}
+
+case class DhtFileEntry(hGUID: String, locator: String, version: Int) // <hGUID>#<locator>#<version>
+
+trait File
+
+case class WallEntry(index: Int, text: String) extends File
+
+/**
+ *
+ * @param lastIndex the index of the most recent entry.
+ */
+case class WallIndex(owner: String, lastIndex: Int, entries: ListBuffer[String]) extends File
+
+class Peer(context: ActorContext[PeerMessage], mail: String) extends AbstractBehavior[PeerMessage](context) {
   //Used SHA-256 because MD5 used in paper is not secure
   private def SHA256Hash(stringToHash: String): String = {
     String.format("%064x", new BigInteger(1, MessageDigest.getInstance("SHA-256").digest(stringToHash.getBytes("UTF-8"))));
   }
 
-  object FileTypes extends Enumeration {
-    type FileType = Value
 
-    val Index, List, FriendList, FirstName, LastName, BirthDay, City, WallIndex, WallEntry = Value
-  }
-
-  case class DhtFileEntry(hGUID: String, locator: String, version: Int) // <hGUID>#<locator>#<version>
-
-  trait File
-
-  case class WallEntry(index: Int, text: String) extends File
-
-  /**
-   *
-   * @param lastIndex the index of the most recent entry.
-   */
-case class WallIndex(owner: String, lastIndex: Int, entries: ListBuffer[String]) extends File
-
-class Peer(context: ActorContext[PeerMessage], mail: String) extends AbstractBehavior[PeerMessage](context) {
   //Used SHA-256 because MD5 not secure (Check with linux: "echo -n "Test@test.com" | openssl dgst -sha256")
   private val hashedMail = SHA256Hash(mail)
   val files: mutable.Map[String, Any] = mutable.Map()
@@ -106,6 +105,7 @@ class Peer(context: ActorContext[PeerMessage], mail: String) extends AbstractBeh
 
 
   override def onMessage(msg: PeerMessage): Behavior[PeerMessage] = {
+    context.log.info(s"received message: ${msg}")
     
     msg match{
       case Message(nonHashedSender, message) => 

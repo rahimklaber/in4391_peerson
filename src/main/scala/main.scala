@@ -25,6 +25,7 @@ object Guardian {
       while(true){
         val cmd = readLine().split(" ")
         cmd.head match {
+          case "send-message" => peers.head ! Message("Peer0@mail.com", "Hello",false)
           case "wall-add" => peers.head ! AddWallEntry(cmd.tail.reduce((a,b) => a + " " + b))
           case "wall-add-remote" => peers.head ! PeerCmd(AddToWall(cmd.tail.head,cmd.tail.tail.reduce((a,b)=> a + " " + b)))
           case "inspect-dht" => dht.LocalDht.printElements()
@@ -52,8 +53,6 @@ object Guardian {
     // For example :
     peers.head ! Login("home")
 
-    peers.head ! Message("Peer0@mail.com", "Hello") // Boot strap message 0 send to 1
-
     Behaviors.receiveMessage { message: Empty =>
       Behaviors.same
     }
@@ -62,6 +61,6 @@ object Guardian {
 
 
 object main extends App {
-  // Call the apply method of the Guardian class with parameter 2 and return a Behaviour
+  // Call the apply method of the Guardian class with parameter 2 and return a Behavior
   val guardian = ActorSystem(Guardian(2), "guardian")
 }

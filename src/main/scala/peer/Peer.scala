@@ -33,13 +33,11 @@ case class WallEntry(index: Int, text: String) extends File
 case class WallIndex(owner: String, lastIndex: Int, entries: ListBuffer[String]) extends File
 
 class Peer(context: ActorContext[PeerMessage], mail: String) extends AbstractBehavior[PeerMessage](context) {
-  //Used SHA-256 because MD5 used in paper is not secure
+  //Used SHA-256 because MD5 used in paper is not secure (Checked with linux: "echo -n "Test@test.com" | openssl dgst -sha256")
   private def SHA256Hash(stringToHash: String): String = {
     String.format("%064x", new BigInteger(1, MessageDigest.getInstance("SHA-256").digest(stringToHash.getBytes("UTF-8"))));
   }
 
-
-  //Used SHA-256 because MD5 not secure (Check with linux: "echo -n "Test@test.com" | openssl dgst -sha256")
   private val hashedMail = SHA256Hash(mail)
   val files: mutable.Map[String, Any] = mutable.Map()
 
@@ -86,7 +84,7 @@ class Peer(context: ActorContext[PeerMessage], mail: String) extends AbstractBeh
   }
 
   // Logic for answering the user
-  private def chatMessage(mailToContact: String, message: String, selfMail:String){
+  private def chatMessage(mailToContact: String, message: String, selfMail:String, ack: Boolean){
     val dhtLookUp = dht.LocalDht.get(SHA256Hash(mailToContact))
     dhtLookUp match {
       case None => println(s"User: $mailToContact, not found in DHT")
@@ -94,7 +92,7 @@ class Peer(context: ActorContext[PeerMessage], mail: String) extends AbstractBeh
         try {
           // Looks up user and sends a message back
           val peerRef = getPeerRef(dhtLookUp.get.asInstanceOf[String]) 
-          peerRef ! Message(selfMail,message)
+          peerRef ! Message(selfMail,message,ack)
         }
         catch { 
           //Catches all errors if DHT has stored value, but user offline
@@ -108,11 +106,16 @@ class Peer(context: ActorContext[PeerMessage], mail: String) extends AbstractBeh
     context.log.info(s"received message: ${msg}")
     
     msg match{
-      case Message(nonHashedSender, message) => 
-        // TODO: what is expected test behavior here? Does only send "I got your message" back and forth
-        context.log.info(s"From: $nonHashedSender| Message: $message")
-        this.chatMessage(nonHashedSender,"I got your message",this.mail)
-        this
+      case Message(nonHashedSender, message,ack) => 
+        ack match {
+          case true => 
+            context.log.info(nonHashedSender+" sent an ack")
+          case false => 
+            context.log.info(s"From: $nonHashedSender| Message: $message")
+            this.chatMessage(nonHashedSender,"I got your message",this.mail,true)
+            this
+        }
+        
       case Login(location) => {
         LoginProcedure.start(location, hashedMail)
         println(dht.LocalDht.get(hashedMail))

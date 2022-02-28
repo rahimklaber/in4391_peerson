@@ -5,7 +5,7 @@ import akka.actor.typed.ActorRef
 // Info needed for chat messages
 trait PeerMessage
 
-case class Message(nonHashedSender: String, message : String) extends PeerMessage 
+case class Message(nonHashedSender: String, message : String, ack: Boolean) extends PeerMessage 
 
 case class Example(text: String) extends PeerMessage
 

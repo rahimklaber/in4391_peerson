@@ -46,18 +46,14 @@ class Peer(context: ActorContext[PeerMessage], mail: String) extends AbstractBeh
 
   override def onMessage(msg: PeerMessage): Behavior[PeerMessage] = {
     
-    val from = msg.nonHashedSender
-    val message = msg.message
-
-    context.log.info(s"From: $from| Message: $message")
-
-    msg match {
-      // TODO: what is expected test behavior here? Does only send "I got your message" back and forth
+    msg match{
       case Message(nonHashedSender, message) => 
+        // TODO: what is expected test behavior here? Does only send "I got your message" back and forth
+        context.log.info(s"From: $nonHashedSender| Message: $message")
         this.chatMessage(nonHashedSender,"I got your message",this.mail)
         this
     }
-  }
+  } 
 }
 
 object Peer {

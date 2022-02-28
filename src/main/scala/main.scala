@@ -11,10 +11,6 @@ object Guardian {
       peers = context.spawn(peer.Peer(s"Peer${i}@mail.com"), s"peer${i}") :: peers
     })
 
-    println("peers"+peers)
-
-    println("peers.head"+peers.head)
-
     // For now you can put send messages to peers here.
     // For example :
     // peers.head ! Example("hi")

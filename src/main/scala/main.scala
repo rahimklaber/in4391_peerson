@@ -1,9 +1,10 @@
 import akka.actor.typed.scaladsl.AskPattern.{Askable, schedulerFromActorSystem}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
+import peer.{Peer, Message, PeerMessage}
 import akka.util.Timeout
 import peer.{AddToWall, AddWallEntry, Example, FileRequest, FileResponse, GetFile, PeerCmd, PeerMessage}
-import peer.{Example, Login, PeerMessage, Test}
+import peer.{Example, Login, PeerMessage}
 
 import scala.concurrent.duration.DurationInt
 import scala.io.StdIn.readLine
@@ -18,7 +19,7 @@ object Guardian {
 
     // create two Peer actors with an int as mail
     (0 until n).foreach(i => {
-      peers = context.spawn(peer.Peer(s"${i}"), s"peer${i}") :: peers
+      peers = context.spawn(Peer(s"Peer${i}@mail.com"), s"peer${i}") :: peers
     })
     new Thread{
       while(true){
@@ -26,7 +27,7 @@ object Guardian {
         cmd.head match {
           case "wall-add" => peers.head ! AddWallEntry(cmd.tail.reduce((a,b) => a + " " + b))
           case "wall-add-remote" => peers.head ! PeerCmd(AddToWall(cmd.tail.head,cmd.tail.tail.reduce((a,b)=> a + " " + b)))
-          case "inspect-dht" => dht.LocalDht._map.foreach(e => println(e))
+          case "inspect-dht" => dht.LocalDht.printElements()
           case "get-file" => {
             implicit val system = context.system
             implicit val timeout : Timeout = 1.seconds
@@ -51,9 +52,9 @@ object Guardian {
     // For example :
     peers.head ! Login("home")
 
-    // WHAT DOES THIS DO?
-    Behaviors.receiveMessage { message: Empty =>
+    peers.head ! Message("Peer0@mail.com", "Hello") // Boot strap message 0 send to 1
 
+    Behaviors.receiveMessage { message: Empty =>
       Behaviors.same
     }
   }

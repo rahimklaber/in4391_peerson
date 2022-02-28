@@ -4,7 +4,12 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 object LocalDht extends DHT{
-  val _map : mutable.Map[String,List[Any]] = mutable.Map()
+
+  // Map stores user in the format ["Hashed-email", location]
+  private val _map : mutable.Map[String, List[Any]] = mutable.Map()
+
+  def printElements() = _map.foreach(e => println(e))
+
   override def put(key: String, data: Any): Unit = {
     _map.put(key,data :: Nil)
   }

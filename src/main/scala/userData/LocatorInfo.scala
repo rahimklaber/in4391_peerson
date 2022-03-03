@@ -1,6 +1,6 @@
-package userdata
+package userData
 
-import userdata.State.State
+import userData.State.State
 
 case class LocatorInfo(
                         val locator: String, // a string defined by user, to tell on which machine the user is currently active

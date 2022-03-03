@@ -1,9 +1,9 @@
-package userdata
+package userData
 
 import java.io.{BufferedReader, InputStreamReader}
 import java.net.URL
 
-object LogInProcedure {
+object LoginProcedure {
 
   /**
    * the start stage of login process

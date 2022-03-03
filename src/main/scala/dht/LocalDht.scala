@@ -1,22 +1,28 @@
 package dht
 
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 
-object LocalDht extends DHT{
+object LocalDHT extends DHT {
 
-  // Map stores user in the format ["Hashed-email", location]
-  private val _map : mutable.Map[String, List[Any]] = mutable.Map()
+  /**
+   * a mutable map
+   * stores user in the format ["hashed-email", location]
+   */
+  private val _map: mutable.Map[String, List[Any]] = mutable.Map()
 
-  def printElements() = _map.foreach(e => println(e))
-
+  /**
+   * put a new key on the DHT
+   * create a data list for this key
+   * add the data to the list
+   */
   override def put(key: String, data: Any): Unit = {
-    _map.put(key,data :: Nil)
+    _map.put(key, data :: Nil)
   }
 
-  override def contains(key: String): Boolean =
-    if (_map.contains(key)) true
-    else false
+  /**
+   * retrieves the head of data list by key
+   * if key not existed, return None
+   */
   override def get(key: String): Option[Any] = {
     val value = _map.get(key)
     value match {
@@ -25,9 +31,28 @@ object LocalDht extends DHT{
     }
   }
 
-  override def append(key: String, data: Any): Unit = {
-    _map.put(key, data :: _map.getOrElse(key,Nil))
+  /**
+   * check if the DHT contains a certain key
+   */
+  override def contains(key: String): Boolean = {
+    _map.contains(key)
   }
 
+  /**
+   * update the data list with a new item under a key
+   */
+  override def append(key: String, data: Any): Unit = {
+    _map.put(key, data :: _map.getOrElse(key, Nil))
+  }
+
+  /**
+   * retrieves all values stored in a data list under a key
+   */
   override def getAll(key: String): Option[List[Any]] = _map.get(key)
+
+  /**
+   * a helper method to print all entries in _map
+   */
+  def printElement(): Unit = _map.foreach(entry => println(entry))
+
 }

@@ -1,12 +1,14 @@
-package userData
+package userdata
 
 import java.io.{BufferedReader, InputStreamReader}
 import java.net.URL
 
-object LoginProcedure {
+object LogInProcedure {
 
+  /**
+   * the start stage of login process
+   */
   def start(location: String, hashedMail: String): Unit = {
-
     /*
     * Possible cases
     * 1. never been registered
@@ -17,14 +19,14 @@ object LoginProcedure {
     * */
 
     // for testing
-//    val inf = List(LocatorInfo("home", findIPAddress(), "80", State.active))
-//    val inf = List(LocatorInfo("home", findIPAddress(), "80", State.offline))
-//    val inf = List(LocatorInfo("laptop", findIPAddress(), "80", State.online))
+    //    val inf = List(LocatorInfo("home", findIPAddress(), "80", State.active))
+    //    val inf = List(LocatorInfo("home", findIPAddress(), "80", State.offline))
+    //    val inf = List(LocatorInfo("laptop", findIPAddress(), "80", State.online))
     val inf = List(LocatorInfo("laptop", findIPAddress(), "80", State.offline))
-    dht.LocalDht.put(hashedMail, inf)
+    dht.LocalDHT.put(hashedMail, inf)
 
     // choose between login and register
-    if (dht.LocalDht.contains(hashedMail)) {
+    if (dht.LocalDHT.contains(hashedMail)) {
       login(location, hashedMail)
     } else {
       register(location, hashedMail)
@@ -32,46 +34,42 @@ object LoginProcedure {
   }
 
   def login(location: String, hashedMail: String): Unit = {
-
-    // 1. get user info from the dht
-    val userInfo = dht.LocalDht.get(hashedMail)
+    // 1. get user info from the DHT
+    val userInfo = dht.LocalDHT.get(hashedMail)
     var locations: List[LocatorInfo] = userInfo match {
       case Some(value) => value.asInstanceOf[List[LocatorInfo]]
-      case None => throw new Exception() // TO DO: handle error
+      case None => throw new Exception()  // TODO: handle error
     }
 
-    // 3. if no desired location add it
+    // 2. if no desired location add it
     val desiredLocation = locations.filter(l => l.locator == location)
     if (desiredLocation.isEmpty) {
-      locations = locations :+ LocatorInfo(location, findIPAddress(), "80", State.active)
+      locations = locations :: LocatorInfo(location, findIPAddress(), "80", State.active)
     }
 
-    // 4. update user info
-    val updatedUserInfo = locations.map(l => {
+    // 3. update user info
+    val updateUserInfo = locations.map(l => {
       val newState = {
-        if(l.locator == location) State.active
+        if (l.locator == location) State.active
         else State.offline
       }
       LocatorInfo(l.locator, l.IP, l.port, newState)
     })
 
-    // 5. send new info to DHT
-    dht.LocalDht.put(hashedMail, updatedUserInfo)
+    // 4. send new info to DHT
+    dht.LocalDHT.put(hashedMail, updateUserInfo)
   }
 
-  def register(location: String, hashedMail: String) = {
+  def register(location: String, hashedMail: String): Unit = {
     val ip = findIPAddress()
     val port = "80"
-    val locator = new LocatorInfo(location, ip, port, State.active)
-    dht.LocalDht.put(hashedMail, List(locator))
-
+    val locator = LocatorInfo(location, ip, port, State.active)
+    dht.LocalDHT.put(hashedMail, List(locator))
   }
 
-  def findIPAddress(): String ={
-    val whatismyipURL = new URL("http://checkip.amazonaws.com")
-    val in:BufferedReader = new BufferedReader(new InputStreamReader(
-      whatismyipURL.openStream()))
+  def findIPAddress(): String = {
+    val whereIsMyIPURL = new URL("http://checkip.amazonaws.com")
+    val in: BufferedReader = new BufferedReader(new InputStreamReader(whereIsMyIPURL.openStream()))
     in.readLine()
   }
-
 }

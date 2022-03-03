@@ -1,6 +1,6 @@
-package userData
+package userdata
 
-import userData.State.State
+import userdata.State.State
 
 case class LocatorInfo(
                         val locator: String, // a string defined by user, to tell on which machine the user is currently active
@@ -12,10 +12,8 @@ case class LocatorInfo(
                         // val timestamp: Int // time in seconds since 01.01.1970, used fot OpenDHT problems -> maybe not needed
                       )
 
-object State extends Enumeration
-{
+object State extends Enumeration {
   type State = Value
-
   val online = Value("online")
   val active = Value("active")
   val offline = Value("offline")

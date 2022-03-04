@@ -3,10 +3,9 @@ package peer
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import dht.{Encrypt, File, FileOperations, LocalDHT, Wall}
-import userdata.LogInProcedure
+import userData.LoginProcedure
 
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 
 object Peer {
   def apply(mail: String): Behavior[PeerMessage] = {
@@ -30,13 +29,6 @@ object Peer {
     val localFiles: mutable.Map[String, File] = mutable.Map()
 
     /**
-     * initialization block
-     * put (hashedMail -> contextPath) on localDHT
-     * TODO (now): combine this with login/location
-     */
-    LocalDHT.put(hashedMail, context.self.path.toString)
-
-    /**
      * message handler
      * @param msg incoming Akka message
      */
@@ -53,13 +45,14 @@ object Peer {
 
         case Login(location) =>
           // TODO: modify LogInProcedure.start(), which overwrites the previous storage in DHT
-          LogInProcedure.start(location, hashedMail)
+          LoginProcedure.start(location, hashedMail)
           println(LocalDHT.get(hashedMail))
 
         case FileRequest(fileName, version, replyTo) =>
           localFiles.get(fileName) match {
             case Some(value) if value.isInstanceOf[File] =>
               replyTo ! FileResponse(200, fileName, version, Some(value), context.self)
+            case Some(_) => ()
             case None => replyTo ! FileResponse(404, fileName, version, None, context.self)
           }
 
@@ -69,6 +62,7 @@ object Peer {
             case Some(file) =>
               localFiles.put(fileName, file)
               FileOperations.add(hashedMail, context.self.path.toString, 0, file)
+            case None => ()
           }
 
         case PeerCmd(cmd) =>

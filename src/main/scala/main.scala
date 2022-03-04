@@ -1,34 +1,60 @@
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
-import dht.LocalDHT
-import peer.{Message, Peer, PeerMessage}
+import dht.{GetPeerKey, LocalDHT}
+import peer.{PeerCmd, PeerMessage, SendMessageCommand}
 
 import scala.collection.mutable
 import scala.io.StdIn.readLine
 
 
+/**
+ * Based on LoginProcedure
+ * All the registered users will store
+ * (hashedMail, List(LocatorInfo(location, IP, port, state))
+ * in DHT
+ */
+
 object Guardian {
-  /**
-   * user and location as a key of peers
-   * @param user mail (not hashed)
-   * @param location location string
-   */
-  case class UserAndLocation(user: String, location: String)
 
   def apply(n: Int): Behavior[REPLCommand] = Behaviors.setup { context =>
-    // create a map of peers
-    // (user, string) -> ActorRef[PeerMessage]
-    var peers: mutable.Map[UserAndLocation, ActorRef[PeerMessage]] = mutable.Map()
+    /**
+     * create a map of peers, [a local backup for Guardian to speed up lookup]
+     * s"'${user}'@${location}" -> ActorRef[PeerMessage]
+     * only stores active/online users, offline users will be removed
+     */
+    val peers: mutable.Map[String, ActorRef[PeerMessage]] = mutable.Map()
+
+    /**
+     * get ActorRef if the message sender is now active/online
+     * @param sender sender mail (not hashed)
+     * @return ActorRef if exists, else None
+     */
+    def getPeerRefByGuardian(sender: String): Option[ActorRef[PeerMessage]] = {
+      val validSenders = peers.keys.filter(k => k.startsWith(s"'${sender}'"))
+      if (validSenders.isEmpty) {
+        None
+      } else {
+        Some(peers(validSenders.head))
+      }
+    }
 
     Behaviors.receiveMessage { msg: REPLCommand =>
       msg match {
 
         /**
-         * TODO: improve SendMessage Object under peer/
+         * TODO: finish the logic here
          * 1. if any location of receiver is found active/online, send message
          * 2. if not, add to wall
          */
-        case SendMessage(sender: String, receiver: String, text: String) => ()
+        case SendMessage(sender: String, receiver: String, text: String) => {
+          val lookup = getPeerRefByGuardian(sender)
+          lookup match {
+            case Some(senderRef: ActorRef[PeerMessage]) =>
+              senderRef ! PeerCmd(SendMessageCommand(receiver, text))
+            case _ =>
+              println(s"Sender ${sender} currently unavailable")
+          }
+        }
 
         /**
          * inspect DHT
@@ -37,7 +63,7 @@ object Guardian {
           LocalDHT.printElement()
 
         /**
-         * test purpose: add wall by user
+         * TODO: The following cases
          */
         case AddWallByUser(sender: String, owner: String, text: String) => ()
         case AddWallByGuardian(owner: String, text: String) => ()
@@ -45,13 +71,31 @@ object Guardian {
         case RequestFileByGuardian(responder: String, fileName: String, version: Int) => ()
         case SendFileByUser(sender: String, receiver: String, fileName: String, version: Int) => ()
         case SendFileByGuardian(receiver: String, fileName: String, version: Int) => ()
+
+        /**
+         * Login
+         * Every login spawns a new context
+         */
         case Login(user: String, location: String) =>
-          val userKey = UserAndLocation(user, location)
-          val actorName : String = s"'${user}'@${location}"
-          val userRef = context.spawn(Peer(user), actorName)
-          peers.put(userKey, userRef)
-          userRef ! peer.Login(location)
-        case Logout(user: String, location: String) => ()  // TODO: finish the logic
+          val peerKey = GetPeerKey(user, location)
+          // I have to take `peerKey` out as a separate variable or it may throw an error
+          // with brackets [] added on both sides of the string, probably because it's not thread-safe
+          val peerRef = context.spawn(peer.Peer(user), peerKey)
+          /**
+           * peerKey -> peerRef stored in `peers`
+           */
+          peers.put(peerKey, peerRef)
+          /**
+           * peerKey -> peerPaths stored in `LocalDHT`
+           */
+          val peerPath = peerRef.path.toString
+          LocalDHT.put(peerKey, peerPath)
+          peerRef ! peer.Login(location)
+
+        /**
+         * TODO: Logout
+         */
+        case Logout(user: String, location: String) => ()
         case _ => ()
       }
       Behaviors.same

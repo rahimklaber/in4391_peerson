@@ -2,7 +2,7 @@ package peer
 
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
-import dht.{Encrypt, File, FileOperations, LocalDHT, Wall}
+import dht.{Encrypt, File, FileOperations, GetPathByMail, LocalDHT, Wall}
 import userData.LoginProcedure
 
 import scala.collection.mutable
@@ -40,7 +40,7 @@ object Peer {
             context.log.info(s"$sender send an ack")
           } else {
             context.log.info(s"From: $sender | Message: $text")
-            SendMessage(context, sender, "I got your message", mail, ack = true)
+            SendChatMessage(context, sender, mail, "I got your message", ack = true)
           }
 
         case Login(location) =>
@@ -61,6 +61,10 @@ object Peer {
           received match {
             case Some(file) =>
               localFiles.put(fileName, file)
+
+              /**
+               * TODO (if time allows): replace context.self.path.toString to locator
+               */
               FileOperations.add(hashedMail, context.self.path.toString, 0, file)
             case None => ()
           }
@@ -77,10 +81,24 @@ object Peer {
 
             // command the current peer to request a file
             case GetFileCommand(fileName, replyTo) => LocalDHT.get(fileName) match {
-              case Some(FileOperations.DHTFileEntry(hashedMail, locator, version)) =>
+              /**
+               * TODO (if time allows): replace context.self.path.toString to locator
+               */
+              case Some(FileOperations.DHTFileEntry(hashedMail, path, version)) =>
                 // actor classic kinda screws up. Instead just send a file request and then handle in explicitly
-                GetPeerRef(context, locator) ! FileRequest(fileName, version, context.self)
+                GetPeerRef(context, path) ! FileRequest(fileName, version, context.self)
             }
+
+            // command the current peer to send message
+            case SendMessageCommand(receiver, text) =>
+              val pathLookUp = GetPathByMail(receiver)
+              println(pathLookUp)
+              pathLookUp match {
+                case Some(receiverPath: String) =>
+                  GetPeerRef(context, receiverPath) ! Message(mail, text, ack = false)
+                case _ =>
+                  context.self ! PeerCmd(AddToWallCommand(receiver, text))
+              }
 
             case _ => ()
           }

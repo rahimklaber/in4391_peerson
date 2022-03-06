@@ -1,10 +1,13 @@
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
-import dht.{GetPeerKey, LocalDHT}
-import peer.{PeerCmd, PeerMessage, SendMessageCommand}
+import akka.util.Timeout
+import dht.{GetPeerKey, LocalDHT, Wall}
+import peer.{AddToWallCommand, FileRequest, GetFileCommand, PeerCmd, PeerMessage, SendMessageCommand}
 
 import scala.collection.mutable
+import scala.concurrent.duration.DurationInt
 import scala.io.StdIn.readLine
+import akka.actor.typed.scaladsl.AskPattern.{Askable, schedulerFromActorSystem}
 
 
 /**
@@ -65,10 +68,40 @@ object Guardian {
         /**
          * TODO: The following cases
          */
-        case AddWallByUser(sender: String, owner: String, text: String) => ()
-        case AddWallByGuardian(owner: String, text: String) => ()
-        case RequestFileByUser(requester: String, responder: String, fileName: String, version: Int) => ()
-        case RequestFileByGuardian(responder: String, fileName: String, version: Int) => ()
+        case AddWallByUser(sender: String, owner: String, text: String) =>  {
+          val lookup = getPeerRefByGuardian(sender)
+          lookup match {
+            case Some(senderRef: ActorRef[PeerMessage]) =>
+              senderRef ! PeerCmd(AddToWallCommand(owner,text))
+            case _ =>
+              println(s"Owner ${owner} currently unavailable")
+          }
+        }
+        case AddWallByGuardian(owner: String, text: String) => {
+          Wall.add("",owner,text)
+        }
+        case RequestFileByUser(requester: String, responder: String, fileName: String, version: Int) =>
+          val lookup = getPeerRefByGuardian( requester)
+          lookup match {
+            case Some(requesterRef: ActorRef[PeerMessage]) =>
+              requesterRef ! PeerCmd(GetFileCommand(fileName,null))
+            case _ =>
+              println(s"Peer ${requester } currently unavailable")
+          }
+        case RequestFileByGuardian(responder: String, fileName: String, version: Int) => {
+          val lookup = getPeerRefByGuardian( responder)
+          lookup match {
+            case Some(senderRef: ActorRef[PeerMessage]) =>
+              implicit val system = context.system
+              implicit val timeout : Timeout = 1.seconds
+              val future = senderRef.ask(ref => FileRequest(fileName,0,ref))
+              implicit  val ec = system.executionContext
+              future.onComplete(println)
+            case _ =>
+              println(s"Peer ${responder} currently unavailable")
+          }
+
+        }
         case SendFileByUser(sender: String, receiver: String, fileName: String, version: Int) => ()
         case SendFileByGuardian(receiver: String, fileName: String, version: Int) => ()
 

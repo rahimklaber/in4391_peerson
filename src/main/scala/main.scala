@@ -125,7 +125,7 @@ object Guardian {
             /**
              * peerKey -> peerPaths stored in `LocalDHT`
              */
-            val peerPath = peerRef.path.toString
+            val peerPath = peerRef.path.toStringWithAddress(context.system.address)
             peerRef ! peer.Login(location, peerPath)
           }
 

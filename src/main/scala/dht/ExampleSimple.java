@@ -52,6 +52,6 @@ public class ExampleSimple {
     }
 
     private void store(String name, String ip) throws IOException {
-        FuturePut fp = peer.put(Number160.createHash(name)).data(new Data(ip)).start().awaitUninterruptibly();
+        peer.put(Number160.createHash(name)).data(new Data(ip)).start().awaitUninterruptibly();
     }
 }

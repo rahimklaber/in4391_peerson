@@ -1,9 +1,10 @@
 package dht
 
-import net.tomp2p.dht.{PeerBuilderDHT, PeerDHT}
+import net.tomp2p.dht.{FutureGet, PeerBuilderDHT, PeerDHT}
 import net.tomp2p.futures.FutureBootstrap
 import net.tomp2p.p2p.PeerBuilder
 import net.tomp2p.peers.Number160
+import net.tomp2p.storage.Data
 
 import java.net.InetAddress
 
@@ -16,11 +17,25 @@ object DistributedDHT extends DHT {
   fb.awaitUninterruptibly
   if (fb.isSuccess) peer.peer.discover.peerAddress(fb.bootstrapTo.iterator.next).start.awaitUninterruptibly
 
-  override def put(key: String, data: Any): Unit = ???
+  override def put(key: String, data: Any): Unit = {
+    peer.put(Number160.createHash(key)).data(new Data(data)).start.awaitUninterruptibly
+  }
 
-  override def get(key: String): Option[Any] = ???
+  override def get(key: String): Option[Any] = {
+    val futureGet = peer.get(Number160.createHash(key)).start
+    futureGet.awaitUninterruptibly
+    if (futureGet.isSuccess) return Some(futureGet.dataMap.values.iterator.next.`object`())
+    null
+  }
 
-  override def contains(key: String): Boolean = ???
+  override def contains(key: String): Boolean = {
+    val futureGet = peer.get(Number160.createHash(key)).start
+    futureGet.awaitUninterruptibly
+    if (!futureGet.isSuccess) return false
+    println(futureGet.dataMap())
+    if(futureGet.isEmpty) return false
+    true
+  }
 
   override def append(key: String, data: Any): Unit = ???
 

@@ -8,6 +8,7 @@ import scala.collection.mutable
 import scala.concurrent.duration.DurationInt
 import scala.io.StdIn.readLine
 import akka.actor.typed.scaladsl.AskPattern.{Askable, schedulerFromActorSystem}
+import com.typesafe.config.ConfigFactory
 
 
 /**
@@ -19,7 +20,7 @@ import akka.actor.typed.scaladsl.AskPattern.{Askable, schedulerFromActorSystem}
 
 object Guardian {
 
-  def apply(n: Int): Behavior[REPLCommand] = Behaviors.setup { context =>
+  def apply(): Behavior[REPLCommand] = Behaviors.setup { context =>
     /**
      * create a map of peers, [a local backup for Guardian to speed up lookup]
      * s"'${user}'@${location}" -> ActorRef[PeerMessage]
@@ -124,7 +125,7 @@ object Guardian {
             /**
              * peerKey -> peerPaths stored in `LocalDHT`
              */
-            val peerPath = peerRef.path.toString
+            val peerPath = peerRef.path.toStringWithAddress(context.system.address)
             peerRef ! peer.Login(location, peerPath)
           }
 
@@ -154,7 +155,13 @@ object Guardian {
 object main extends App {
   // Call the apply method of the Guardian object with parameter 2
   // start the ActorSystem named "guardian"
-  val guardian = ActorSystem(Guardian(2), "guardian")
+
+//  val config = ConfigFactory.load("remote_application")
+
+  val guardian = ActorSystem(Guardian(), "guardian"/*,config*/)
+
+  println(guardian.path)
+  println(guardian.address)
 
   /**
    * receiving commands from REPL

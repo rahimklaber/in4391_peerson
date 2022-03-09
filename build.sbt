@@ -4,6 +4,9 @@ version := "0.1"
 
 scalaVersion := "2.13.8"
 
+//resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
+
+
 val AkkaVersion = "2.6.18"
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor-typed" % AkkaVersion,

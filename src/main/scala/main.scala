@@ -8,6 +8,7 @@ import scala.collection.mutable
 import scala.concurrent.duration.DurationInt
 import scala.io.StdIn.readLine
 import akka.actor.typed.scaladsl.AskPattern.{Askable, schedulerFromActorSystem}
+import com.typesafe.config.ConfigFactory
 
 
 /**
@@ -19,7 +20,7 @@ import akka.actor.typed.scaladsl.AskPattern.{Askable, schedulerFromActorSystem}
 
 object Guardian {
 
-  def apply(n: Int): Behavior[REPLCommand] = Behaviors.setup { context =>
+  def apply(): Behavior[REPLCommand] = Behaviors.setup { context =>
     /**
      * create a map of peers, [a local backup for Guardian to speed up lookup]
      * s"'${user}'@${location}" -> ActorRef[PeerMessage]
@@ -113,7 +114,11 @@ object Guardian {
           val peerKey = GetPeerKey(user, location)
           // I have to take `peerKey` out as a separate variable or it may throw an error
           // with brackets [] added on both sides of the string, probably because it's not thread-safe
-          val peerRef = context.spawn(peer.Peer(user), peerKey)
+
+          //val peerRef = context.spawn(peer.Peer(user), peerKey)
+          val peerRef = context.system.systemActorOf(peer.Peer(user),peerKey)
+          println(peerRef.path.address)
+          println(peerRef.path)
           /**
            * peerKey -> peerRef stored in `peers`
            */
@@ -124,7 +129,6 @@ object Guardian {
           val peerPath = peerRef.path.toString
           LocalDHT.put(peerKey, peerPath)
           peerRef ! peer.Login(location)
-
         /**
          * TODO: Logout
          */
@@ -141,7 +145,12 @@ object Guardian {
 object main extends App {
   // Call the apply method of the Guardian object with parameter 2
   // start the ActorSystem named "guardian"
-  val guardian = ActorSystem(Guardian(2), "guardian")
+
+  val config = ConfigFactory.load("remote_application")
+
+  val guardian = ActorSystem(Guardian(), "guardian",config)
+
+  println(guardian.path)
 
   /**
    * receiving commands from REPL

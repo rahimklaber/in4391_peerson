@@ -40,4 +40,9 @@ object DistributedDHT extends DHT {
   override def append(key: String, data: Any): Unit = ???
 
   override def getAll(key: String): Option[List[Any]] = ???
+
+  /**
+   * remove a key-value pair
+   */
+  override def remove(key: String): Unit = ???
 }

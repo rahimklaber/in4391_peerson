@@ -28,4 +28,9 @@ trait DHT {
    * retrieves all values stored in a data list under a key
    */
   def getAll(key: String): Option[List[Any]]
+
+  /**
+   * remove a key-value pair
+   */
+  def remove(key: String): Unit
 }

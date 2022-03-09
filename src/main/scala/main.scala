@@ -118,7 +118,7 @@ object Guardian {
           //val peerRef = context.spawn(peer.Peer(user), peerKey)
           val peerRef = context.system.systemActorOf(peer.Peer(user),peerKey)
           println(peerRef.path.address)
-          println(peerRef.path)
+          println(peerRef.path.toStringWithAddress(context.system.address))
           /**
            * peerKey -> peerRef stored in `peers`
            */
@@ -146,11 +146,12 @@ object main extends App {
   // Call the apply method of the Guardian object with parameter 2
   // start the ActorSystem named "guardian"
 
-  val config = ConfigFactory.load("remote_application")
+//  val config = ConfigFactory.load("remote_application")
 
-  val guardian = ActorSystem(Guardian(), "guardian",config)
+  val guardian = ActorSystem(Guardian(), "guardian"/*,config*/)
 
   println(guardian.path)
+  println(guardian.address)
 
   /**
    * receiving commands from REPL

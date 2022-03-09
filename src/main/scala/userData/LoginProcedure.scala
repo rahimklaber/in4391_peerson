@@ -1,16 +1,12 @@
 package userData
 
-import dht.LocalDHT
-
 import java.io.{BufferedReader, InputStreamReader}
 import java.net.URL
 
 object LoginProcedure {
 
-  /**
-   * the start stage of login process
-   */
   def start(location: String, hashedMail: String): Unit = {
+
     /*
     * Possible cases
     * 1. never been registered
@@ -21,69 +17,61 @@ object LoginProcedure {
     * */
 
     // for testing
-    //    val inf = LocatorInfo("home", findIPAddress(), "80", State.active)
-    //    val inf = LocatorInfo("home", findIPAddress(), "80", State.offline)
-    //    val inf = LocatorInfo("laptop", findIPAddress(), "80", State.online)
-    // val inf = LocatorInfo("laptop", findIPAddress(), "80", State.offline)
-    // LocalDHT.put(hashedMail, inf)
+//    val inf = List(LocatorInfo("home", findIPAddress(), "80", State.active))
+//    val inf = List(LocatorInfo("home", findIPAddress(), "80", State.offline))
+//    val inf = List(LocatorInfo("laptop", findIPAddress(), "80", State.online))
+    val inf = List(LocatorInfo("laptop", findIPAddress(), "80", State.offline))
+    dht.LocalDht.put(hashedMail, inf)
 
     // choose between login and register
-    if (LocalDHT.contains(hashedMail)) {
+    if (dht.LocalDht.contains(hashedMail)) {
       login(location, hashedMail)
     } else {
       register(location, hashedMail)
     }
   }
 
-  /**
-   *
-   * @param location location in string, say "laptop", "home"
-   * @param hashedMail hashedMail
-   */
   def login(location: String, hashedMail: String): Unit = {
-    // 1. get user info from the DHT
-    val userLocatorInfos: Option[List[Any]] = LocalDHT.getAll(hashedMail)
-    var locationInfoList: List[LocatorInfo] = userLocatorInfos match {
+
+    // 1. get user info from the dht
+    val userInfo = dht.LocalDht.get(hashedMail)
+    var locations: List[LocatorInfo] = userInfo match {
       case Some(value) => value.asInstanceOf[List[LocatorInfo]]
-      case None => throw new Exception()  // TODO: handle error
+      case None => throw new Exception() // TO DO: handle error
     }
 
-    // 2. if no desired location add it
-    val desiredLocation = locationInfoList.filter(l => l.locator == location)
+    // 3. if no desired location add it
+    val desiredLocation = locations.filter(l => l.locator == location)
     if (desiredLocation.isEmpty) {
-      locationInfoList = LocatorInfo(location, findIPAddress(), "80", State.active) :: locationInfoList
+      locations = locations :+ LocatorInfo(location, findIPAddress(), "80", State.active)
     }
 
-    // 3. update user info
-    //  - only one location is active
-    //  - but there might be multiple locations that are online
-    //  - needs improvement if needed
-    val updateUserInfo = locationInfoList.map(l => {
+    // 4. update user info
+    val updatedUserInfo = locations.map(l => {
       val newState = {
-        if (l.locator == location) State.active
-        else {
-          // active/online -> online
-          if (l.state != State.offline) State.online
-          else State.offline
-        }
+        if(l.locator == location) State.active
+        else State.offline
       }
       LocatorInfo(l.locator, l.IP, l.port, newState)
     })
 
-    // 4. send new info to DHT
-    LocalDHT.put(hashedMail, updateUserInfo)
+    // 5. send new info to DHT
+    dht.LocalDht.put(hashedMail, updatedUserInfo)
   }
 
-  def register(location: String, hashedMail: String): Unit = {
+  def register(location: String, hashedMail: String) = {
     val ip = findIPAddress()
     val port = "80"
-    val locatorInfo = LocatorInfo(location, ip, port, State.active)
-    LocalDHT.put(hashedMail, locatorInfo)
+    val locator = new LocatorInfo(location, ip, port, State.active)
+    dht.LocalDht.put(hashedMail, List(locator))
+
   }
 
-  def findIPAddress(): String = {
-    val whereIsMyIPURL = new URL("http://checkip.amazonaws.com")
-    val in: BufferedReader = new BufferedReader(new InputStreamReader(whereIsMyIPURL.openStream()))
+  def findIPAddress(): String ={
+    val whatismyipURL = new URL("http://checkip.amazonaws.com")
+    val in:BufferedReader = new BufferedReader(new InputStreamReader(
+      whatismyipURL.openStream()))
     in.readLine()
   }
+
 }

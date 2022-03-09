@@ -1,109 +1,169 @@
 package peer
 
-import akka.actor.typed.Behavior
+import akka.actor.ActorSelection
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
-import dht.{Encrypt, File, FileOperations, GetPathByMail, LocalDHT, Wall}
-import userData.LoginProcedure
+import userData.{LocatorInfo, LoginProcedure, State}
+import akka.actor.typed.{ActorRef, Behavior}
+import akka.pattern.ask
+import akka.remote.transport.ActorTransportAdapter.AskTimeout
 
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
-object Peer {
-  def apply(mail: String): Behavior[PeerMessage] = {
-    Behaviors.setup(context => {
-      new PeerBehavior(context, mail)
-    })
+// For hashing: Based on https://stackoverflow.com/questions/46329956/how-to-correctly-generate-sha-256-checksum-for-a-string-in-scala 
+import java.security.MessageDigest
+import java.math.BigInteger
+
+object FileTypes extends Enumeration {
+  type FileType = Value
+
+  val Index, List, FriendList, FirstName, LastName, BirthDay, City, WallIndex, WallEntry = Value
+}
+
+case class DhtFileEntry(hGUID: String, locator: String, version: Int) // <hGUID>#<locator>#<version>
+
+trait File
+
+case class WallEntry(index: Int, text: String) extends File
+
+/**
+ *
+ * @param lastIndex the index of the most recent entry.
+ */
+case class WallIndex(owner: String, lastIndex: Int, entries: ListBuffer[String]) extends File
+
+class Peer(context: ActorContext[PeerMessage], mail: String) extends AbstractBehavior[PeerMessage](context) {
+  //Used SHA-256 because MD5 used in paper is not secure (Checked with linux: "echo -n "Test@test.com" | openssl dgst -sha256")
+  private def SHA256Hash(stringToHash: String): String = {
+    String.format("%064x", new BigInteger(1, MessageDigest.getInstance("SHA-256").digest(stringToHash.getBytes("UTF-8"))));
   }
 
-  class PeerBehavior(context: ActorContext[PeerMessage], mail: String) extends AbstractBehavior[PeerMessage](context) {
+  private val hashedMail = SHA256Hash(mail)
+  val files: mutable.Map[String, Any] = mutable.Map()
 
-    /**
-     * instance variable - hashed email
-     */
-    private val hashedMail = Encrypt(mail)
+  val WALL_INDEX_KEY = s"${hashedMail}@wi"
 
-    /**
-     * instance variable - a mutable map to store all the local files
-     * TODO (if time allows): connects to JSON files or databases to fetch a peer's files
-     * Now just create a new Map every time
-     */
-    val localFiles: mutable.Map[String, File] = mutable.Map()
+  type callback = PeerMessage => Unit
 
-    /**
-     * message handler
-     * @param msg incoming Akka message
-     */
-    override def onMessage(msg: PeerMessage): Behavior[PeerMessage] = {
-      context.log.info(s"received message: $msg")
-      msg match {
-        case Message(sender, text, ack) =>
-          if (ack) {
-            context.log.info(s"$sender send an ack")
-          } else {
-            context.log.info(s"From: $sender | Message: $text")
-            SendChatMessage(context, sender, mail, "I got your message", ack = true)
-          }
+  val callBacks : mutable.Map[String,callback] = mutable.Map()
 
-        case Login(location) =>
-          // TODO: modify LogInProcedure.start(), which overwrites the previous storage in DHT
-          LoginProcedure.start(location, hashedMail)
-          println(LocalDHT.get(hashedMail))
+  // put location in the dht with the hash being the key
+  files.put(WALL_INDEX_KEY, WallIndex(hashedMail, -1, ListBuffer.empty))
+  dht.LocalDht.append(WALL_INDEX_KEY, DhtFileEntry(hashedMail, context.self.path.toString, 0))
+  dht.LocalDht.put(hashedMail, context.self.path.toString)
 
-        case FileRequest(fileName, version, replyTo) =>
-          localFiles.get(fileName) match {
-            case Some(value) if value.isInstanceOf[File] =>
-              replyTo ! FileResponse(200, fileName, version, Some(value), context.self)
-            case Some(_) => ()
-            case None => replyTo ! FileResponse(404, fileName, version, None, context.self)
-          }
+  def wallEntryKey(index: Int): String = s"${hashedMail}@we${index}"
 
-        // If we get a response, store it locally.
-        case FileResponse(code, fileName, version, received, from) if code == 200 =>
-          received match {
-            case Some(file) =>
-              localFiles.put(fileName, file)
+  def wallIndex = files(WALL_INDEX_KEY).asInstanceOf[WallIndex]
 
-              /**
-               * TODO (if time allows): replace context.self.path.toString to locator
-               */
-              FileOperations.add(hashedMail, context.self.path.toString, 0, file)
-            case None => ()
-          }
+  def addToWall(text: String): Unit = {
+    val newIndex = wallIndex.lastIndex + 1
+    val entryKey = wallEntryKey(newIndex)
+    wallIndex.entries.append(entryKey)
+    files.put(entryKey, WallEntry(newIndex, text))
+    dht.LocalDht.append(entryKey, DhtFileEntry(hashedMail, context.self.path.toString, 0)) // for now assume not versioning
 
-        case PeerCmd(cmd) =>
-          cmd match {
-            // command the current peer (as sender) to put text on receiver's wall
-            case AddToWallCommand(receiver, text) => {
-              LocalDHT.get(receiver) match {
-                case Some(receiverPath: String) => Wall.add(mail, receiver, text)
-                case None => ()
-              }
-            }
+    // increment index
+    files.put(WALL_INDEX_KEY, wallIndex.copy(lastIndex = newIndex))
+  }
 
-            // command the current peer to request a file
-            case GetFileCommand(fileName, replyTo) => LocalDHT.get(fileName) match {
-              /**
-               * TODO (if time allows): replace context.self.path.toString to locator
-               */
-              case Some(FileOperations.DHTFileEntry(hashedMail, path, version)) =>
-                // actor classic kinda screws up. Instead just send a file request and then handle in explicitly
-                GetPeerRef(context, path) ! FileRequest(fileName, version, context.self)
-            }
+  /**
+   * Add a file to our local storage and update the dht.
+   */
+  def addFile(fileName: String,file: File): Unit ={
+    files.put(fileName, file)
+    dht.LocalDht.append(fileName, DhtFileEntry(hashedMail, context.self.path.toString, 0)) // for now assume not versioning
+  }
 
-            // command the current peer to send message
-            case SendMessageCommand(receiver, text) =>
-              val pathLookUp = GetPathByMail(receiver)
-              println(pathLookUp)
-              pathLookUp match {
-                case Some(receiverPath: String) =>
-                  GetPeerRef(context, receiverPath) ! Message(mail, text, ack = false)
-                case _ =>
-                  context.self ! PeerCmd(AddToWallCommand(receiver, text))
-              }
+  // Put location in the DHT with the hash being the key
+  dht.LocalDht.put(hashedMail, context.self.path.toString)
 
-            case _ => ()
-          }
+  // Get a reference to a peer from its path.
+  private def getPeerRef(path: String): ActorSelection = {
+    context.system.classicSystem.actorSelection(path)
+  }
+
+  // Logic for answering the user
+  private def chatMessage(mailToContact: String, message: String, selfMail:String, ack: Boolean){
+    val dhtLookUp = dht.LocalDht.get(SHA256Hash(mailToContact))
+    dhtLookUp match {
+      case None => println(s"User: $mailToContact, not found in DHT")
+      case Some(value) => 
+        try {
+          // Looks up user and sends a message back
+          val peerRef = getPeerRef(dhtLookUp.get.asInstanceOf[String]) 
+          peerRef ! Message(selfMail,message,ack)
+        }
+        catch { 
+          //Catches all errors if DHT has stored value, but user offline
+          case _ : Throwable => println("Could not send to user!")
+        }
       }
-      this
+  }
+
+
+  override def onMessage(msg: PeerMessage): Behavior[PeerMessage] = {
+    context.log.info(s"received message: ${msg}")
+    
+    msg match{
+      case Message(nonHashedSender, message,ack) => 
+        ack match {
+          case true => 
+            context.log.info(nonHashedSender+" sent an ack")
+          case false => 
+            context.log.info(s"From: $nonHashedSender| Message: $message")
+            this.chatMessage(nonHashedSender,"I got your message",this.mail,true)
+            this
+        }
+        
+      case Login(location) => {
+        LoginProcedure.start(location, hashedMail)
+        println(dht.LocalDht.get(hashedMail))
+      }
+      case AddWallEntry(text) => {
+        addToWall(text)
+
+      }
+      case FileRequest(name,version,ref) => {
+        files.get(name) match {
+          case Some(value) if value.isInstanceOf[File] => ref ! FileResponse(200,name,version,Some(value.asInstanceOf[File]))
+          case None => ref ! FileResponse(404,name,version,None)
+        }
+
+      }
+      // If we get a response, store it locally and send it if it was requested.
+      case r@FileResponse(code,name,version,file) if code == 200 => {
+        callBacks(name)(r)
+        file match {
+          case Some(value) => addFile(name,value)
+        }
+      }
+      case PeerCmd(cmd) => {
+        cmd match {
+          case AddToWall(user, text) => {
+            dht.LocalDht.get(user) match {
+              case Some(path: String) => getPeerRef(path) ! AddWallEntry(text)
+              case None => ()
+            }
+          }
+          case GetFile(fileName, replyTo) => dht.LocalDht.getAll(fileName) match {
+            case Some(DhtFileEntry(hGUID, locator, version) :: _) =>
+              callBacks.put(fileName,{msg => replyTo ! msg})
+              getPeerRef(locator) ! FileRequest(fileName, version, this.context.self) // actor classic kinda screws up. Instead just send a file request and then handle in explicitly
+          }
+          case _ => ()
+        }
+
+      } 
     }
+    this
+  }
+}
+
+object Peer {
+  def apply(mail:String): Behavior[PeerMessage] = {
+    Behaviors.setup(context => {
+      new Peer(context, mail)
+    })
   }
 }

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ScalaCompilerConfiguration">
-    <profile name="sbt 1" modules="in4391_peerson,in4391_peerson_4680" />
+    <profile name="sbt 1" modules="in4391_peerson,in4391_peerson_1609" />
   </component>
 </project>

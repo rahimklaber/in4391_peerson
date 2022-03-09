@@ -2,8 +2,9 @@ package peer
 
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
-import dht.{Encrypt, File, FileOperations, GetPathByMail, LocalDHT, Wall}
-import userData.LoginProcedure
+import dht.{Encrypt, File, FileOperations, GetPathByMail, GetPeerKey, LocalDHT, Wall}
+import userData.State.offline
+import userData.{LocatorInfo, LoginProcedure}
 
 import scala.collection.mutable
 
@@ -44,9 +45,31 @@ object Peer {
           }
 
         case Login(location) =>
-          // TODO: modify LogInProcedure.start(), which overwrites the previous storage in DHT
           LoginProcedure.start(location, hashedMail)
           println(LocalDHT.get(hashedMail))
+
+        case Logout(location) =>
+          val lookup = LocalDHT.getAll(hashedMail)
+          lookup match {
+            case Some(value) =>
+              val locatorInfoList: List[LocatorInfo] = value.asInstanceOf[List[LocatorInfo]]
+              // test case
+              // - login kevin, m; login kevin, n; logout kevin, m
+              val locatorInfo = locatorInfoList.filter(l => l.locator == location)
+              if (locatorInfo.isEmpty) {
+                println(s"user ${mail} not logged in at location ${location}")
+              } else {
+                val onlineLocatorInfo = locatorInfo.head
+                val offlineLocatorInfo = onlineLocatorInfo.copy(state = offline)
+                val newLocatorInfoList = offlineLocatorInfo :: locatorInfoList.filter(l => l.locator != location)
+                LocalDHT.put(hashedMail, newLocatorInfoList.head)
+                newLocatorInfoList.tail.foreach(l => LocalDHT.append(hashedMail, l))
+                println(newLocatorInfoList)
+                val peerKey = GetPeerKey(mail, location)
+                LocalDHT.remove(peerKey)
+              }
+            case _ => println(s"user ${mail} not found by DHT!")
+          }
 
         case FileRequest(fileName, version, replyTo) =>
           localFiles.get(fileName) match {
@@ -73,9 +96,10 @@ object Peer {
           cmd match {
             // command the current peer (as sender) to put text on receiver's wall
             case AddToWallCommand(receiver, text) => {
-              LocalDHT.get(receiver) match {
+              val receiverPathLookUp = GetPathByMail(receiver)
+              receiverPathLookUp match {
                 case Some(receiverPath: String) => Wall.add(mail, receiver, text)
-                case None => ()
+                case None => println("")
               }
             }
 

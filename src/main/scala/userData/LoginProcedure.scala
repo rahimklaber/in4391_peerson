@@ -71,7 +71,8 @@ object LoginProcedure {
     })
 
     // 4. send new info to DHT
-    LocalDHT.put(hashedMail, updateUserInfo)
+    LocalDHT.put(hashedMail, updateUserInfo.head)
+    updateUserInfo.tail.foreach(l => LocalDHT.append(hashedMail, l))
   }
 
   def register(location: String, hashedMail: String): Unit = {

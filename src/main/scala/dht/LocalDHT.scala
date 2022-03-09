@@ -50,6 +50,8 @@ object LocalDHT extends DHT {
    */
   override def getAll(key: String): Option[List[Any]] = _map.get(key)
 
+  override def remove(key: String): Unit = _map.remove(key)
+
   /**
    * a helper method to print all entries in _map
    */

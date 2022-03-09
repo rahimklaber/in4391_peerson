@@ -45,7 +45,6 @@ object Guardian {
       msg match {
 
         /**
-         * TODO: finish the logic here
          * 1. if any location of receiver is found active/online, send message
          * 2. if not, add to wall
          */
@@ -78,10 +77,10 @@ object Guardian {
           }
         }
         case AddWallByGuardian(owner: String, text: String) => {
-          Wall.add("",owner,text)
+          Wall.add("", owner, text)
         }
         case RequestFileByUser(requester: String, responder: String, fileName: String, version: Int) =>
-          val lookup = getPeerRefByGuardian( requester)
+          val lookup = getPeerRefByGuardian(requester)
           lookup match {
             case Some(requesterRef: ActorRef[PeerMessage]) =>
               requesterRef ! PeerCmd(GetFileCommand(fileName,null))
@@ -89,13 +88,13 @@ object Guardian {
               println(s"Peer ${requester } currently unavailable")
           }
         case RequestFileByGuardian(responder: String, fileName: String, version: Int) => {
-          val lookup = getPeerRefByGuardian( responder)
+          val lookup = getPeerRefByGuardian(responder)
           lookup match {
             case Some(senderRef: ActorRef[PeerMessage]) =>
               implicit val system = context.system
               implicit val timeout : Timeout = 1.seconds
               val future = senderRef.ask(ref => FileRequest(fileName,0,ref))
-              implicit  val ec = system.executionContext
+              implicit val ec = system.executionContext
               future.onComplete(println)
             case _ =>
               println(s"Peer ${responder} currently unavailable")
@@ -128,7 +127,15 @@ object Guardian {
         /**
          * TODO: Logout
          */
-        case Logout(user: String, location: String) => ()
+        case Logout(user: String, location: String) =>
+          val lookup = getPeerRefByGuardian(user)
+          lookup match {
+            case Some(userRef: ActorRef[PeerMessage]) =>
+              userRef ! peer.Logout(location)
+            case _ =>
+              println(s"User ${user} currently unavailable")
+          }
+
         case _ => ()
       }
       Behaviors.same

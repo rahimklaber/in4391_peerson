@@ -10,9 +10,10 @@ import java.net.InetAddress
 
 object DistributedDHT extends DHT {
 
-  // create a new Peer
+  // create a new DHT node
   val peer: PeerDHT = new PeerBuilderDHT(new PeerBuilder(Number160.createHash(1)).ports(4000 + 1).start).start
 
+  // connect to a stable DHT node
   val fb: FutureBootstrap = this.peer.peer.bootstrap.inetAddress(InetAddress.getByName("127.0.0.1")).ports(4001).start
   fb.awaitUninterruptibly
   if (fb.isSuccess) peer.peer.discover.peerAddress(fb.bootstrapTo.iterator.next).start.awaitUninterruptibly

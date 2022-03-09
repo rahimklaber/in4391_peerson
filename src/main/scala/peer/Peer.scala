@@ -2,8 +2,9 @@ package peer
 
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
-import dht.{Encrypt, File, FileOperations, GetPathByMail, LocalDHT, Wall}
-import userData.LoginProcedure
+import dht.{DistributedDHT, Encrypt, File, FileOperations, GetPathByMail, GetPeerKey, LocalDHT, Wall}
+import userData.State.offline
+import userData.{LocatorInfo, LoginProcedure, LogoutProcedure}
 
 import scala.collection.mutable
 
@@ -43,10 +44,14 @@ object Peer {
             SendChatMessage(context, sender, mail, "I got your message", ack = true)
           }
 
-        case Login(location) =>
-          // TODO: modify LogInProcedure.start(), which overwrites the previous storage in DHT
-          LoginProcedure.start(location, hashedMail)
-          println(LocalDHT.get(hashedMail))
+        case Login(location, path) =>
+          LoginProcedure.start(location, hashedMail, path)
+          println(DistributedDHT.getAll(hashedMail))
+
+        case Logout(location) =>
+          LogoutProcedure.start(location, hashedMail)
+          println(DistributedDHT.getAll(hashedMail))
+
 
         case FileRequest(fileName, version, replyTo) =>
           localFiles.get(fileName) match {
@@ -73,9 +78,10 @@ object Peer {
           cmd match {
             // command the current peer (as sender) to put text on receiver's wall
             case AddToWallCommand(receiver, text) => {
-              LocalDHT.get(receiver) match {
+              val receiverPathLookUp = GetPathByMail(receiver)
+              receiverPathLookUp match {
                 case Some(receiverPath: String) => Wall.add(mail, receiver, text)
-                case None => ()
+                case None => println("")
               }
             }
 

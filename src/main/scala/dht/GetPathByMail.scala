@@ -11,7 +11,8 @@ object GetPathByMail {
    */
   def apply(mail: String): Option[String] = {
     val hashedMail: String = dht.Encrypt(mail)
-    val lookup = LocalDHT.getAll(hashedMail)
+//    val lookup = LocalDHT.getAll(hashedMail)
+    val lookup = DistributedDHT.getAll(hashedMail)
     println(lookup)
     lookup match {
       case Some(value: List[LocatorInfo]) =>
@@ -21,12 +22,13 @@ object GetPathByMail {
           println(s"peer ${mail} not found by DHT")
           None
         } else {
-          val location = validLocatorInfoList.head.locator
-          val pathLookUp = LocalDHT.get(GetPeerKey(mail, location))
-          pathLookUp match {
-            case Some(path: String) => Some(path)
-            case _ => None
-          }
+//          val location = validLocatorInfoList.head.locator
+//          val pathLookUp = LocalDHT.get(GetPeerKey(mail, location))
+//          pathLookUp match {
+//            case Some(path: String) => Some(path)
+//            case _ => None
+//          }
+          Some(validLocatorInfoList.head.path)
         }
       case _ => None
     }

@@ -1,7 +1,7 @@
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.util.Timeout
-import dht.{GetPeerKey, LocalDHT, Wall}
+import dht.{DistributedDHT, GetPeerKey, LocalDHT, Wall}
 import peer.{AddToWallCommand, FileRequest, GetFileCommand, PeerCmd, PeerMessage, SendMessageCommand}
 
 import scala.collection.mutable
@@ -46,7 +46,6 @@ object Guardian {
       msg match {
 
         /**
-         * TODO: finish the logic here
          * 1. if any location of receiver is found active/online, send message
          * 2. if not, add to wall
          */
@@ -79,10 +78,10 @@ object Guardian {
           }
         }
         case AddWallByGuardian(owner: String, text: String) => {
-          Wall.add("",owner,text)
+          Wall.add("", owner, text)
         }
         case RequestFileByUser(requester: String, responder: String, fileName: String, version: Int) =>
-          val lookup = getPeerRefByGuardian( requester)
+          val lookup = getPeerRefByGuardian(requester)
           lookup match {
             case Some(requesterRef: ActorRef[PeerMessage]) =>
               requesterRef ! PeerCmd(GetFileCommand(fileName,null))
@@ -90,13 +89,13 @@ object Guardian {
               println(s"Peer ${requester } currently unavailable")
           }
         case RequestFileByGuardian(responder: String, fileName: String, version: Int) => {
-          val lookup = getPeerRefByGuardian( responder)
+          val lookup = getPeerRefByGuardian(responder)
           lookup match {
             case Some(senderRef: ActorRef[PeerMessage]) =>
               implicit val system = context.system
               implicit val timeout : Timeout = 1.seconds
               val future = senderRef.ask(ref => FileRequest(fileName,0,ref))
-              implicit  val ec = system.executionContext
+              implicit val ec = system.executionContext
               future.onComplete(println)
             case _ =>
               println(s"Peer ${responder} currently unavailable")
@@ -115,24 +114,35 @@ object Guardian {
           // I have to take `peerKey` out as a separate variable or it may throw an error
           // with brackets [] added on both sides of the string, probably because it's not thread-safe
 
-          //val peerRef = context.spawn(peer.Peer(user), peerKey)
-          val peerRef = context.system.systemActorOf(peer.Peer(user),peerKey)
-          println(peerRef.path.address)
-          println(peerRef.path.toStringWithAddress(context.system.address))
-          /**
-           * peerKey -> peerRef stored in `peers`
-           */
-          peers.put(peerKey, peerRef)
-          /**
-           * peerKey -> peerPaths stored in `LocalDHT`
-           */
-          val peerPath = peerRef.path.toString
-          LocalDHT.put(peerKey, peerPath)
-          peerRef ! peer.Login(location)
+          if (peers.contains(peerKey)){
+            println("User is already logged in with this device")
+          } else {
+            val peerRef = context.spawn(peer.Peer(user), peerKey) //
+            /**
+             * peerKey -> peerRef stored in `peers`
+             */
+            peers.put(peerKey, peerRef)
+            /**
+             * peerKey -> peerPaths stored in `LocalDHT`
+             */
+            val peerPath = peerRef.path.toString
+            peerRef ! peer.Login(location, peerPath)
+          }
+
         /**
          * TODO: Logout
          */
-        case Logout(user: String, location: String) => ()
+        case Logout(user: String, location: String) =>
+          val lookup = getPeerRefByGuardian(user)
+          lookup match {
+            case Some(userRef: ActorRef[PeerMessage]) =>
+              userRef ! peer.Logout(location)
+              context.stop(userRef)
+              peers.remove(GetPeerKey(user, location))
+            case _ =>
+              println(s"User ${user} currently unavailable")
+          }
+
         case _ => ()
       }
       Behaviors.same

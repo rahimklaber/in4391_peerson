@@ -3,6 +3,8 @@ package dht
 trait DHT {
     val local: LocalDht.type = LocalDht
 
+  val distributed: DistributedDHT.type = DistributedDHT
+
   def put(key: String, data: Any): Unit
 
   def get(key: String): Option[Any]

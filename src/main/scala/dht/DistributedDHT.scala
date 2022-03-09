@@ -7,10 +7,10 @@ import net.tomp2p.peers.Number160
 
 import java.net.InetAddress
 
-class DistributedDHT(peerId: Int) extends DHT {
+object DistributedDHT extends DHT {
 
   // create a new Peer
-  val peer: PeerDHT = new PeerBuilderDHT(new PeerBuilder(Number160.createHash(peerId)).ports(4000 + peerId).start).start
+  val peer: PeerDHT = new PeerBuilderDHT(new PeerBuilder(Number160.createHash(1)).ports(4000 + 1).start).start
 
   val fb: FutureBootstrap = this.peer.peer.bootstrap.inetAddress(InetAddress.getByName("127.0.0.1")).ports(4001).start
   fb.awaitUninterruptibly

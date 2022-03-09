@@ -7,6 +7,7 @@ case class LocatorInfo(
                         IP: String,
                         port: String,
                         state: State, // only one peerID can be active at a time
+                        path: String // path accessible by scala actors
                         // meshID: String, // optional, if a user is participating in a user mesh project
                         // GPS: String, // optional, coordinate based P2p neighbour selection
                         // timestamp: Int // time in seconds since 01.01.1970, used fot OpenDHT problems -> maybe not needed

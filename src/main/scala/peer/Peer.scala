@@ -2,9 +2,9 @@ package peer
 
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
-import dht.{Encrypt, File, FileOperations, GetPathByMail, GetPeerKey, LocalDHT, Wall}
+import dht.{DistributedDHT, Encrypt, File, FileOperations, GetPathByMail, GetPeerKey, LocalDHT, Wall}
 import userData.State.offline
-import userData.{LocatorInfo, LoginProcedure}
+import userData.{LocatorInfo, LoginProcedure, LogoutProcedure}
 
 import scala.collection.mutable
 
@@ -44,32 +44,14 @@ object Peer {
             SendChatMessage(context, sender, mail, "I got your message", ack = true)
           }
 
-        case Login(location) =>
-          LoginProcedure.start(location, hashedMail)
-          println(LocalDHT.get(hashedMail))
+        case Login(location, path) =>
+          LoginProcedure.start(location, hashedMail, path)
+          println(DistributedDHT.getAll(hashedMail))
 
         case Logout(location) =>
-          val lookup = LocalDHT.getAll(hashedMail)
-          lookup match {
-            case Some(value) =>
-              val locatorInfoList: List[LocatorInfo] = value.asInstanceOf[List[LocatorInfo]]
-              // test case
-              // - login kevin, m; login kevin, n; logout kevin, m
-              val locatorInfo = locatorInfoList.filter(l => l.locator == location)
-              if (locatorInfo.isEmpty) {
-                println(s"user ${mail} not logged in at location ${location}")
-              } else {
-                val onlineLocatorInfo = locatorInfo.head
-                val offlineLocatorInfo = onlineLocatorInfo.copy(state = offline)
-                val newLocatorInfoList = offlineLocatorInfo :: locatorInfoList.filter(l => l.locator != location)
-                LocalDHT.put(hashedMail, newLocatorInfoList.head)
-                newLocatorInfoList.tail.foreach(l => LocalDHT.append(hashedMail, l))
-                println(newLocatorInfoList)
-                val peerKey = GetPeerKey(mail, location)
-                LocalDHT.remove(peerKey)
-              }
-            case _ => println(s"user ${mail} not found by DHT!")
-          }
+          LogoutProcedure.start(location, hashedMail)
+          println(DistributedDHT.getAll(hashedMail))
+
 
         case FileRequest(fileName, version, replyTo) =>
           localFiles.get(fileName) match {

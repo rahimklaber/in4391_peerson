@@ -1,6 +1,6 @@
 package userData
 
-import dht.LocalDHT
+import dht.{DistributedDHT, LocalDHT}
 
 import java.io.{BufferedReader, InputStreamReader}
 import java.net.URL
@@ -10,7 +10,7 @@ object LoginProcedure {
   /**
    * the start stage of login process
    */
-  def start(location: String, hashedMail: String): Unit = {
+  def start(location: String, hashedMail: String, path: String): Unit = {
     /*
     * Possible cases
     * 1. never been registered
@@ -28,10 +28,10 @@ object LoginProcedure {
     // LocalDHT.put(hashedMail, inf)
 
     // choose between login and register
-    if (LocalDHT.contains(hashedMail)) {
-      login(location, hashedMail)
+    if (DistributedDHT.contains(hashedMail)) {
+      login(location, hashedMail, path)
     } else {
-      register(location, hashedMail)
+      register(location, hashedMail, path)
     }
   }
 
@@ -40,9 +40,9 @@ object LoginProcedure {
    * @param location location in string, say "laptop", "home"
    * @param hashedMail hashedMail
    */
-  def login(location: String, hashedMail: String): Unit = {
+  def login(location: String, hashedMail: String, path: String): Unit = {
     // 1. get user info from the DHT
-    val userLocatorInfos: Option[List[Any]] = LocalDHT.getAll(hashedMail)
+    val userLocatorInfos: Option[List[Any]] = DistributedDHT.getAll(hashedMail)
     var locationInfoList: List[LocatorInfo] = userLocatorInfos match {
       case Some(value) => value.asInstanceOf[List[LocatorInfo]]
       case None => throw new Exception()  // TODO: handle error
@@ -51,7 +51,7 @@ object LoginProcedure {
     // 2. if no desired location add it
     val desiredLocation = locationInfoList.filter(l => l.locator == location)
     if (desiredLocation.isEmpty) {
-      locationInfoList = LocatorInfo(location, findIPAddress(), "80", State.active) :: locationInfoList
+      locationInfoList = LocatorInfo(location, findIPAddress(), "80", State.active, path) :: locationInfoList
     }
 
     // 3. update user info
@@ -67,19 +67,20 @@ object LoginProcedure {
           else State.offline
         }
       }
-      LocatorInfo(l.locator, l.IP, l.port, newState)
+      LocatorInfo(l.locator, l.IP, l.port, newState, l.path)
     })
 
     // 4. send new info to DHT
-    LocalDHT.put(hashedMail, updateUserInfo.head)
-    updateUserInfo.tail.foreach(l => LocalDHT.append(hashedMail, l))
+//    LocalDHT.put(hashedMail, updateUserInfo.head)
+//    updateUserInfo.tail.foreach(l => LocalDHT.append(hashedMail, l))
+    DistributedDHT.put(hashedMail, updateUserInfo)
   }
 
-  def register(location: String, hashedMail: String): Unit = {
+  def register(location: String, hashedMail: String, path: String): Unit = {
     val ip = findIPAddress()
     val port = "80"
-    val locatorInfo = LocatorInfo(location, ip, port, State.active)
-    LocalDHT.put(hashedMail, locatorInfo)
+    val locatorInfo = LocatorInfo(location, ip, port, State.active, path)
+    DistributedDHT.put(hashedMail, locatorInfo :: Nil)
   }
 
   def findIPAddress(): String = {

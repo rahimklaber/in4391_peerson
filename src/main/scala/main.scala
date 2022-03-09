@@ -1,7 +1,7 @@
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.util.Timeout
-import dht.{GetPeerKey, LocalDHT, Wall}
+import dht.{DistributedDHT, GetPeerKey, LocalDHT, Wall}
 import peer.{AddToWallCommand, FileRequest, GetFileCommand, PeerCmd, PeerMessage, SendMessageCommand}
 
 import scala.collection.mutable
@@ -112,17 +112,21 @@ object Guardian {
           val peerKey = GetPeerKey(user, location)
           // I have to take `peerKey` out as a separate variable or it may throw an error
           // with brackets [] added on both sides of the string, probably because it's not thread-safe
-          val peerRef = context.spawn(peer.Peer(user), peerKey)
-          /**
-           * peerKey -> peerRef stored in `peers`
-           */
-          peers.put(peerKey, peerRef)
-          /**
-           * peerKey -> peerPaths stored in `LocalDHT`
-           */
-          val peerPath = peerRef.path.toString
-          LocalDHT.put(peerKey, peerPath)
-          peerRef ! peer.Login(location)
+
+          if (peers.contains(peerKey)){
+            println("User is already logged in with this device")
+          } else {
+            val peerRef = context.spawn(peer.Peer(user), peerKey) //
+            /**
+             * peerKey -> peerRef stored in `peers`
+             */
+            peers.put(peerKey, peerRef)
+            /**
+             * peerKey -> peerPaths stored in `LocalDHT`
+             */
+            val peerPath = peerRef.path.toString
+            peerRef ! peer.Login(location, peerPath)
+          }
 
         /**
          * TODO: Logout
@@ -132,6 +136,8 @@ object Guardian {
           lookup match {
             case Some(userRef: ActorRef[PeerMessage]) =>
               userRef ! peer.Logout(location)
+              context.stop(userRef)
+              peers.remove(GetPeerKey(user, location))
             case _ =>
               println(s"User ${user} currently unavailable")
           }

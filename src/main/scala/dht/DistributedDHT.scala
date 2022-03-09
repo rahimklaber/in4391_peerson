@@ -37,12 +37,18 @@ object DistributedDHT extends DHT {
     true
   }
 
-  override def append(key: String, data: Any): Unit = ???
-
-  override def getAll(key: String): Option[List[Any]] = ???
+  override def getAll(key: String): Option[List[Any]] = {
+    val value = get(key)
+    value match {
+      case Some(v) => Some(v.asInstanceOf[List[Any]])
+      case _ => None
+    }
+  }
 
   /**
    * remove a key-value pair
    */
   override def remove(key: String): Unit = ???
+
+  override def append(key: String, data: Any): Unit = ???
 }

@@ -6,7 +6,7 @@ import userData.State.offline
 
 object LogoutProcedure {
 
-  def start(location: String, hashedMail: String): Unit = {
+  def start(location: String, hashedMail: String, DistributedDHT: DistributedDHT): Unit = {
     //          val lookup = LocalDHT.getAll(hashedMail)
     val lookup = DistributedDHT.getAll(hashedMail)
     lookup match {

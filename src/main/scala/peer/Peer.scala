@@ -9,13 +9,13 @@ import userData.{LocatorInfo, LoginProcedure, LogoutProcedure}
 import scala.collection.mutable
 
 object Peer {
-  def apply(mail: String): Behavior[PeerMessage] = {
+  def apply(mail: String, dhtNode: DistributedDHT): Behavior[PeerMessage] = {
     Behaviors.setup(context => {
-      new PeerBehavior(context, mail)
+      new PeerBehavior(context, mail, dhtNode)
     })
   }
 
-  class PeerBehavior(context: ActorContext[PeerMessage], mail: String) extends AbstractBehavior[PeerMessage](context) {
+  class PeerBehavior(context: ActorContext[PeerMessage], mail: String, dhtNode: DistributedDHT) extends AbstractBehavior[PeerMessage](context) {
 
     /**
      * instance variable - hashed email
@@ -41,16 +41,16 @@ object Peer {
             context.log.info(s"$sender send an ack")
           } else {
             context.log.info(s"From: $sender | Message: $text")
-            SendChatMessage(context, sender, mail, "I got your message", ack = true)
+            SendChatMessage(context, sender, mail, "I got your message", ack = true, dhtNode)
           }
 
         case Login(location, path) =>
-          LoginProcedure.start(location, hashedMail, path)
-          println(DistributedDHT.getAll(hashedMail))
+          LoginProcedure.start(location, hashedMail, path, dhtNode)
+          println(dhtNode.getAll(hashedMail))
 
         case Logout(location) =>
-          LogoutProcedure.start(location, hashedMail)
-          println(DistributedDHT.getAll(hashedMail))
+          LogoutProcedure.start(location, hashedMail, dhtNode)
+          println(dhtNode.getAll(hashedMail))
 
 
         case FileRequest(fileName, version, replyTo) =>
@@ -78,7 +78,7 @@ object Peer {
           cmd match {
             // command the current peer (as sender) to put text on receiver's wall
             case AddToWallCommand(receiver, text) => {
-              val receiverPathLookUp = GetPathByMail(receiver)
+              val receiverPathLookUp = GetPathByMail(receiver, dhtNode)
               receiverPathLookUp match {
                 case Some(receiverPath: String) => Wall.add(mail, receiver, text)
                 case None => println("")
@@ -97,7 +97,7 @@ object Peer {
 
             // command the current peer to send message
             case SendMessageCommand(receiver, text) =>
-              val pathLookUp = GetPathByMail(receiver)
+              val pathLookUp = GetPathByMail(receiver, dhtNode)
               println(pathLookUp)
               pathLookUp match {
                 case Some(receiverPath: String) =>

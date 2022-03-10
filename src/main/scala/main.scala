@@ -28,6 +28,8 @@ object Guardian {
      */
     val peers: mutable.Map[String, ActorRef[PeerMessage]] = mutable.Map()
 
+    var counter = 1
+
     /**
      * get ActorRef if the message sender is now active/online
      * @param sender sender mail (not hashed)
@@ -117,7 +119,9 @@ object Guardian {
           if (peers.contains(peerKey)){
             println("User is already logged in with this device")
           } else {
-            val peerRef = context.spawn(peer.Peer(user), peerKey) //
+            val dhtNode: DistributedDHT = new DistributedDHT(counter)
+            counter = counter + 1
+            val peerRef = context.spawn(peer.Peer(user, dhtNode), peerKey) //
             /**
              * peerKey -> peerRef stored in `peers`
              */

@@ -9,7 +9,7 @@ object GetPathByMail {
    * @param mail mail to look up
    * @return path if exists, else None
    */
-  def apply(mail: String): Option[String] = {
+  def apply(mail: String, DistributedDHT: DistributedDHT): Option[String] = {
     val hashedMail: String = dht.Encrypt(mail)
 //    val lookup = LocalDHT.getAll(hashedMail)
     val lookup = DistributedDHT.getAll(hashedMail)

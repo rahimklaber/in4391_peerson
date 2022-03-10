@@ -7,11 +7,12 @@ import net.tomp2p.peers.Number160
 import net.tomp2p.storage.Data
 
 import java.net.InetAddress
+import java.util.logging.LogManager
 
-object DistributedDHT extends DHT {
+class DistributedDHT(nodeId: Int) extends DHT {
 
   // create a new DHT node
-  val peer: PeerDHT = new PeerBuilderDHT(new PeerBuilder(Number160.createHash(1)).ports(4000 + 1).start).start
+  val peer: PeerDHT = new PeerBuilderDHT(new PeerBuilder(Number160.createHash(nodeId)).ports(4000 + nodeId).start).start
 
   // connect to a stable DHT node
   val fb: FutureBootstrap = this.peer.peer.bootstrap.inetAddress(InetAddress.getByName("127.0.0.1")).ports(4001).start

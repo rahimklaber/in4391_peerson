@@ -10,7 +10,7 @@ object LoginProcedure {
   /**
    * the start stage of login process
    */
-  def start(location: String, hashedMail: String, path: String): Unit = {
+  def start(location: String, hashedMail: String, path: String, DistributedDHT: DistributedDHT): Unit = {
     /*
     * Possible cases
     * 1. never been registered
@@ -29,9 +29,9 @@ object LoginProcedure {
 
     // choose between login and register
     if (DistributedDHT.contains(hashedMail)) {
-      login(location, hashedMail, path)
+      login(location, hashedMail, path, DistributedDHT)
     } else {
-      register(location, hashedMail, path)
+      register(location, hashedMail, path, DistributedDHT)
     }
   }
 
@@ -40,7 +40,7 @@ object LoginProcedure {
    * @param location location in string, say "laptop", "home"
    * @param hashedMail hashedMail
    */
-  def login(location: String, hashedMail: String, path: String): Unit = {
+  def login(location: String, hashedMail: String, path: String,DistributedDHT: DistributedDHT): Unit = {
     // 1. get user info from the DHT
     val userLocatorInfos: Option[List[Any]] = DistributedDHT.getAll(hashedMail)
     var locationInfoList: List[LocatorInfo] = userLocatorInfos match {
@@ -76,7 +76,7 @@ object LoginProcedure {
     DistributedDHT.put(hashedMail, updateUserInfo)
   }
 
-  def register(location: String, hashedMail: String, path: String): Unit = {
+  def register(location: String, hashedMail: String, path: String, DistributedDHT: DistributedDHT): Unit = {
     val ip = findIPAddress()
     val port = "80"
     val locatorInfo = LocatorInfo(location, ip, port, State.active, path)

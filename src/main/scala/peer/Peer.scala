@@ -45,6 +45,7 @@ object Peer {
           }
 
         case Login(location, path) =>
+          Wall.load(context, mail)
           LoginProcedure.start(location, hashedMail, path, dhtNode)
           println(dhtNode.getAll(hashedMail))
 

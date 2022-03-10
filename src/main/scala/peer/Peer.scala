@@ -45,7 +45,7 @@ object Peer {
           }
 
         case Login(location, path) =>
-          Wall.load(context, mail)
+          Wall.load(context, mail,dhtNode)
           LoginProcedure.start(location, hashedMail, path, dhtNode)
           println(dhtNode.getAll(hashedMail))
 
@@ -71,7 +71,7 @@ object Peer {
               /**
                * TODO (if time allows): replace context.self.path.toString to locator
                */
-              FileOperations.add(hashedMail, context.self.path.toString, 0, file)
+              FileOperations.add(hashedMail, context.self.path.toString, 0, file,dhtNode)
             case None => ()
           }
 
@@ -81,13 +81,13 @@ object Peer {
             case AddToWallCommand(receiver, text) => {
               val receiverPathLookUp = GetPathByMail(receiver, dhtNode)
               receiverPathLookUp match {
-                case Some(receiverPath: String) => Wall.add(mail, receiver, text)
+                case Some(receiverPath: String) => Wall.add(mail, receiver, text,dhtNode)
                 case None => println("")
               }
             }
 
             // command the current peer to request a file
-            case GetFileCommand(fileName, replyTo) => LocalDHT.get(fileName) match {
+            case GetFileCommand(fileName, replyTo) => dhtNode.get(fileName) match {
               /**
                * TODO (if time allows): replace context.self.path.toString to locator
                */

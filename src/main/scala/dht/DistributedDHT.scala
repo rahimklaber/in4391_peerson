@@ -50,7 +50,9 @@ class DistributedDHT(nodeId: Int) extends DHT {
   /**
    * remove a key-value pair
    */
-  override def remove(key: String): Unit = ???
+  override def remove(key: String): Unit = {
+    peer.remove(Number160.createHash(key)).start()
+  }
 
   override def append(key: String, data: Any): Unit = ???
 }

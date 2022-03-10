@@ -43,37 +43,37 @@ object Wall {
    * create a WallIndex entry for owner if not existed
    * @param owner who owns the wall, mail (not hashed)
    */
-  def load(context: ActorContext[PeerMessage], owner: String): Unit = {
+  def load(context: ActorContext[PeerMessage], owner: String, dht: DHT): Unit = {
     val wallIndexKey: String = getWallIndexKey(owner)
     // if wallIndexKey found, then try to fetch the wall entries
-    if (LocalDHT.contains(wallIndexKey)) {
-      val wallIndexLookup = LocalDHT.get(wallIndexKey)
+    if (dht.contains(wallIndexKey)) {
+      val wallIndexLookup = dht.get(wallIndexKey)
       wallIndexLookup match {
         case Some(ownerWallIndex: WallIndex) =>
           val wallEntryKeyBuffer = ownerWallIndex.entries
           wallEntryKeyBuffer.foreach(wallEntryKey => {
-            val lookup = LocalDHT.get(wallEntryKey)
+            val lookup = dht.get(wallEntryKey)
             lookup match {
               case Some(currentWallEntry: WallEntry) =>
                 context.self ! Message(currentWallEntry.sender, currentWallEntry.content, ack = false)
                 // remove from DHT
-                LocalDHT.remove(wallEntryKey)
+                dht.remove(wallEntryKey)
               case _ => println(s"WallEntry under ${wallEntryKey} not found")
             }
           })
         case _ => println(s"WallIndex under ${wallIndexKey} not found")
       }
     }
-    LocalDHT.put(wallIndexKey, WallIndex(Encrypt(owner), -1, mutable.ListBuffer.empty))
+    dht.put(wallIndexKey, WallIndex(Encrypt(owner), -1, mutable.ListBuffer.empty))
   }
 
   def getWallIndexKey(owner: String): String = {
     s"${owner}@wi"
   }
 
-  def getWallIndex(owner: String): WallIndex = {
+  def getWallIndex(owner: String, dht: DHT): WallIndex = {
     val key: String = getWallIndexKey(owner)
-    val lookup = LocalDHT.get(key)
+    val lookup = dht.get(key)
     lookup match {
       case Some(entry) =>
         entry.asInstanceOf[WallIndex]
@@ -93,9 +93,9 @@ object Wall {
     s"${owner}@we${index}"
   }
 
-  def getWallEntry(owner: String, index: Int): WallEntry = {
+  def getWallEntry(owner: String, index: Int,dht:DHT): WallEntry = {
     val key: String = getWallEntryKey(owner, index)
-    val lookup = LocalDHT.get(key)
+    val lookup = dht.get(key)
     lookup match {
       case Some(entry) =>
         entry.asInstanceOf[WallEntry]
@@ -105,17 +105,17 @@ object Wall {
     }
   }
 
-  /**
-   * add the file to receiver's wall
-   * @param sender the email of the sender (not hashed)
-   * @param receiver the email of the receiver (not hashed)
-   * @param file the file of type File trait
-   * @param maxLength max length of the file content stored in DHT, default: 128
-   * TODO (if time allows): deal with fileName and fileType
-   */
-  def add(sender: String, receiver: String, file: File, maxLength: Int = 128): Unit = {
-    add(sender, receiver, text = file.content.substring(0, maxLength))
-  }
+//  /**
+//   * add the file to receiver's wall
+//   * @param sender the email of the sender (not hashed)
+//   * @param receiver the email of the receiver (not hashed)
+//   * @param file the file of type File trait
+//   * @param maxLength max length of the file content stored in DHT, default: 128
+//   * TODO (if time allows): deal with fileName and fileType
+//   */
+//  def add(sender: String, receiver: String, file: File, maxLength: Int = 128): Unit = {
+//    add(sender, receiver, text = file.content.substring(0, maxLength))
+//  }
 
   /**
    * add the message to receiver's wall
@@ -123,17 +123,17 @@ object Wall {
    * @param receiver the email of the receiver (not hashed)
    * @param text the text content of the message
    */
-  def add(sender: String, receiver: String, text: String): Unit = {
-    val lastWallIndex = getWallIndex(receiver)
+  def add(sender: String, receiver: String, text: String,dht: DHT): Unit = {
+    val lastWallIndex = getWallIndex(receiver,dht)
     val newIndex = lastWallIndex.lastEntryIndex + 1
     // put a new WallEntry
     val wallEntryKey = getWallEntryKey(receiver, newIndex)
     val wallEntry = WallEntry(newIndex, sender, text)
-    LocalDHT.put(wallEntryKey, wallEntry)
+    dht.put(wallEntryKey, wallEntry)
     // update WallIndex
     val wallIndexKey = getWallIndexKey(receiver)
     val newWallIndex = WallIndex(Encrypt(receiver), newIndex, wallEntryKey +: lastWallIndex.entries)
-    LocalDHT.put(wallIndexKey, newWallIndex)
+    dht.put(wallIndexKey, newWallIndex)
   }
 
   // TODO (if time allows): def remove()

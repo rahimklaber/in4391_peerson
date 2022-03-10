@@ -24,9 +24,9 @@ object FileOperations {
    * @param version default: 0
    * @param file a file of File trait (fileName, fileType, content)
    */
-  def add(hashedMail: String, locator: String, version: Int = 0, file: File): Unit = {
+  def add(hashedMail: String, locator: String, version: Int = 0, file: File,dht:DHT): Unit = {
     val key: String = getDHTFileKey(hashedMail, file.fileType)
     val entry = DHTFileEntry(hashedMail, locator, version)
-    LocalDHT.append(key, entry)
+    dht.put(key, entry)
   }
 }

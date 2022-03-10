@@ -77,7 +77,7 @@ object Guardian {
           }
         }
         case AddWallByGuardian(owner: String, text: String) => {
-          Wall.add("", owner, text)
+          Wall.add("Guardian", owner, text)
         }
         case RequestFileByUser(requester: String, responder: String, fileName: String, version: Int) =>
           val lookup = getPeerRefByGuardian(requester)
@@ -132,6 +132,9 @@ object Guardian {
           lookup match {
             case Some(userRef: ActorRef[PeerMessage]) =>
               userRef ! peer.Logout(location)
+              val peerKey = GetPeerKey(user, location)
+              peers.remove(peerKey)
+              context.stop(userRef)
             case _ =>
               println(s"User ${user} currently unavailable")
           }

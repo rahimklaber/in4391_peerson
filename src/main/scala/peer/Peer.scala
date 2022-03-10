@@ -45,6 +45,7 @@ object Peer {
           }
 
         case Login(location) =>
+          Wall.load(context, mail)
           LoginProcedure.start(location, hashedMail)
           println(LocalDHT.get(hashedMail))
 
@@ -96,11 +97,7 @@ object Peer {
           cmd match {
             // command the current peer (as sender) to put text on receiver's wall
             case AddToWallCommand(receiver, text) => {
-              val receiverPathLookUp = GetPathByMail(receiver)
-              receiverPathLookUp match {
-                case Some(receiverPath: String) => Wall.add(mail, receiver, text)
-                case None => println("")
-              }
+              Wall.add(mail, receiver, text)
             }
 
             // command the current peer to request a file

@@ -1,7 +1,7 @@
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.util.Timeout
-import dht.{DistributedDHT, GetPeerKey, LocalDHT, Wall}
+import dht.{DHT, DistributedDHT, GetPeerKey, LocalDHT, Wall}
 import peer.{AddToWallCommand, FileRequest, GetFileCommand, PeerCmd, PeerMessage, SendMessageCommand}
 
 import scala.collection.mutable
@@ -29,7 +29,7 @@ object Guardian {
     val peers: mutable.Map[String, ActorRef[PeerMessage]] = mutable.Map()
 
     var counter = 1
-
+    var dht : DHT = null // for wall add
     /**
      * get ActorRef if the message sender is now active/online
      * @param sender sender mail (not hashed)
@@ -65,7 +65,7 @@ object Guardian {
          * inspect DHT
          */
         case InspectDHT() =>
-          LocalDHT.printElement()
+//          LocalDHT.printElement()
 
         /**
          * TODO: The following cases
@@ -80,7 +80,7 @@ object Guardian {
           }
         }
         case AddWallByGuardian(owner: String, text: String) => {
-          Wall.add("", owner, text)
+          Wall.add("", owner, text,dht)
         }
         case RequestFileByUser(requester: String, responder: String, fileName: String, version: Int) =>
           val lookup = getPeerRefByGuardian(requester)
@@ -120,6 +120,7 @@ object Guardian {
             println("User is already logged in with this device")
           } else {
             val dhtNode: DistributedDHT = new DistributedDHT(counter)
+            dht = dhtNode
             counter = counter + 1
             val peerRef = context.spawn(peer.Peer(user, dhtNode), peerKey) //
             /**

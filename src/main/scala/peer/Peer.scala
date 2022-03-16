@@ -138,6 +138,10 @@ object Peer {
               }).get()
             }
 
+            case AddNotification(receiver, text) => {
+              AsyncMessage.add(mail, receiver, text, dhtNode)
+            }
+
             // command the current peer to request a file
             case GetFileCommand(fileName, replyTo) => dhtNode.get(fileName,{
               case Some(FileOperations.DHTFileEntry(hashedMail, path, version)) =>
@@ -151,7 +155,7 @@ object Peer {
                 case Some(receiverPath: String) =>
                   GetPeerRef(context, receiverPath) ! Message(mail, text, ack = false)
                 case _ =>
-                  context.self ! PeerCmd(AddToWallCommand(receiver, text))
+                  context.self ! PeerCmd(AddNotification(receiver, text))
               }).get()
             case _ => ()
           }

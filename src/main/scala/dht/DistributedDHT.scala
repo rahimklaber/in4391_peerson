@@ -47,8 +47,9 @@ class DistributedDHT(nodeId: Int) extends DHT {
         if(future.isSuccess()) {
           val value = futureGet.dataMap.values.iterator.next.`object`()
           value match {
-            case Some(v) => callback(Some(v.asInstanceOf[List[Any]]))
-            case _ => callback(None)
+            case v@List(xs) => callback(Some(v))
+            case v@_ =>
+              callback(None)
           }
         } else {
           callback(None)

@@ -1,13 +1,12 @@
 package dht
 
-import net.tomp2p.dht.{FutureGet, PeerBuilderDHT, PeerDHT}
+import net.tomp2p.dht.{PeerBuilderDHT, PeerDHT}
 import net.tomp2p.futures.FutureBootstrap
 import net.tomp2p.p2p.PeerBuilder
 import net.tomp2p.peers.Number160
 import net.tomp2p.storage.Data
 
 import java.net.InetAddress
-import java.util.logging.LogManager
 
 class DistributedDHT(nodeId: Int) extends DHT {
 
@@ -54,5 +53,21 @@ class DistributedDHT(nodeId: Int) extends DHT {
     peer.remove(Number160.createHash(key)).start()
   }
 
-  override def append(key: String, data: Any): Unit = ???
+  override def append(key: String, data: Any): Unit = {
+    val futureGet = peer.get(Number160.createHash(key)).start
+    futureGet.awaitUninterruptibly
+    if (futureGet.isSuccess) {
+      if (futureGet.dataMap.values.iterator.hasNext) {
+
+
+        val list = futureGet.dataMap.values.iterator.next.`object`()
+        list match {
+          case l@List(xs) => put(key, data :: l)
+        }
+      } else {
+        put(key,data::Nil)
+      }
+    }
+
+  }
 }

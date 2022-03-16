@@ -26,7 +26,7 @@ object Wall {
    * @param sender the sender email (not hashed)
    * @param content the file/message content
    */
-  case class WallEntry(index: Int, sender: String, content: String)
+  case class WallEntry(index: Int, sender: String, content: String) extends File
 
   /**
    * The WallIndex File, stored in the DHT in the key-value form of
@@ -37,6 +37,7 @@ object Wall {
    * @param entries a list buffer of all wall entries
    */
   case class WallIndex(hashedMail: String, lastEntryIndex: Int, entries: mutable.ListBuffer[String])
+
 
   /**
    * initialization:

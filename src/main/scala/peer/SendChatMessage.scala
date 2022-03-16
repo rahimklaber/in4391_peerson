@@ -19,7 +19,6 @@ class SendChatMessage(val context: ActorContext[PeerMessage], val sender: String
 
   def onReceivePath(pathLookUp:Option[String]): Unit ={
     pathLookUp match {
-      case None => println(s"User: $receiver, not found in DHT")
       case Some(receiverPath) =>
         try {
           // looks up user and sends a message back
@@ -27,8 +26,15 @@ class SendChatMessage(val context: ActorContext[PeerMessage], val sender: String
           receiverRef ! Message(sender, text, ack)
         } catch {
           // catches all errors if DHT has stored value, but user offline
-          case _: Throwable => println("Cannot find the user!")
+          case _: Throwable =>
+            println(s"Cannot find the user ${receiver}!")
+            // add to receiver's async message list
+            context.self ! PeerCmd(AddOfflineMessage(receiver, text, ack))
         }
+      case _ =>
+        println(s"User: $receiver, not found in DHT")
+        // add to receiver's async message list
+        context.self ! PeerCmd(AddOfflineMessage(receiver, text, ack))
     }
   }
 }

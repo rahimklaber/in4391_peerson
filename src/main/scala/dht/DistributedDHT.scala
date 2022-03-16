@@ -67,11 +67,14 @@ class DistributedDHT(nodeId: Int) extends DHT {
       override def operationComplete(future: BaseFuture): Unit = {
         if(future.isSuccess()) {
           if (futureGet.isEmpty) {
+            println("contains - success, but empty")
             callback(false)
           } else {
+            println("contains - success")
             callback(true)
           }
         } else {
+          println("contains - not success")
           callback(false)
         }
       }

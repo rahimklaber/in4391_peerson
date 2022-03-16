@@ -30,6 +30,11 @@ case class FileResponse(code: Int, fileName: String, version: Int,
  */
 case class PeerCmd(cmd: Command) extends PeerMessage
 
+/**
+ * offline notifications
+ * @param content Any, e.g., AsyncMessage.OfflineMessage, etc.
+ */
+case class Notification(content: Any) extends PeerMessage
 
 
 

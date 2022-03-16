@@ -2,6 +2,7 @@ package peer
 
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
+import dht.AsyncMessage.OfflineMessage
 import dht.{DistributedDHT, Encrypt, File, FileOperations, GetPathByMail, GetPeerKey}
 import userData.State.offline
 import userData.{LocatorInfo, LoginProcedure, LogoutProcedure}
@@ -95,7 +96,8 @@ object Peer {
           }
 
         case Login(location, path) =>
-          Wall.load(context, mail,dhtNode)
+//          Wall.load(context, mail,dhtNode)
+          AsyncMessage.load(context, mail, dhtNode)
           this.location = location
           this.path = path
           val loginProcedure = new LoginProcedure(location, hashedMail, path, dhtNode, onLoginSuccess)
@@ -138,8 +140,8 @@ object Peer {
               }).get()
             }
 
-            case AddNotification(receiver, text) => {
-              AsyncMessage.add(mail, receiver, text, dhtNode)
+            case AddOfflineMessage(receiver, text, ack) => {
+              AsyncMessage.add(mail, receiver, text, ack, dhtNode)
             }
 
             // command the current peer to request a file
@@ -155,10 +157,18 @@ object Peer {
                 case Some(receiverPath: String) =>
                   GetPeerRef(context, receiverPath) ! Message(mail, text, ack = false)
                 case _ =>
-                  context.self ! PeerCmd(AddNotification(receiver, text))
+                  context.self ! PeerCmd(AddOfflineMessage(receiver, text, ack = false))
               }).get()
             case _ => ()
           }
+
+        case Notification(content) => {
+          content match {
+            case OfflineMessage(sender: String, content: String, ack: Boolean) => {
+              context.self ! Message(sender, content, ack)
+            }
+          }
+        }
       }
       this
     }

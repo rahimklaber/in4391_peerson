@@ -75,6 +75,9 @@ object Peer {
     override def onMessage(msg: PeerMessage): Behavior[PeerMessage] = {
       context.log.info(s"received message: $msg")
       msg match {
+        case AddWallEntry(sender,text) => {
+          addToWall(sender,text)
+        }
         case Message(sender, text, ack) =>
           if (ack) {
             context.log.info(s"$sender send an ack")
@@ -122,7 +125,8 @@ object Peer {
             case AddToWallCommand(receiver, text) => {
               val receiverPathLookUp = GetPathByMail(receiver, dhtNode)
               receiverPathLookUp match {
-                case Some(receiverPath: String) => Wall.add(mail, receiver, text,dhtNode)
+                case Some(receiverPath: String) =>
+                  GetPeerRef(context, receiverPath) ! AddWallEntry(mail,text)
                 case None => println("")
               }
             }

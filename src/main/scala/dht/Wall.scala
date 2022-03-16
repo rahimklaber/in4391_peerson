@@ -118,24 +118,24 @@ object Wall {
 //    add(sender, receiver, text = file.content.substring(0, maxLength))
 //  }
 
-  /**
-   * add the message to receiver's wall
-   * @param sender the email of the sender (not hashed)
-   * @param receiver the email of the receiver (not hashed)
-   * @param text the text content of the message
-   */
-  def add(sender: String, receiver: String, text: String,dht: DHT): Unit = {
-    val lastWallIndex = getWallIndex(receiver,dht)
-    val newIndex = lastWallIndex.lastEntryIndex + 1
-    // put a new WallEntry
-    val wallEntryKey = getWallEntryKey(receiver, newIndex)
-    val wallEntry = WallEntry(newIndex, sender, text)
-    dht.put(wallEntryKey, wallEntry)
-    // update WallIndex
-    val wallIndexKey = getWallIndexKey(receiver)
-    val newWallIndex = WallIndex(Encrypt(receiver), newIndex, wallEntryKey +: lastWallIndex.entries)
-    dht.put(wallIndexKey, newWallIndex)
-  }
+//  /**
+//   * add the message to receiver's wall
+//   * @param sender the email of the sender (not hashed)
+//   * @param receiver the email of the receiver (not hashed)
+//   * @param text the text content of the message
+//   */
+//  def add(sender: String, receiver: String, text: String,dht: DHT): Unit = {
+//    val lastWallIndex = getWallIndex(receiver,dht)
+//    val newIndex = lastWallIndex.lastEntryIndex + 1
+//    // put a new WallEntry
+//    val wallEntryKey = getWallEntryKey(receiver, newIndex)
+//    val wallEntry = WallEntry(newIndex, sender, text)
+//    dht.put(wallEntryKey, wallEntry)
+//    // update WallIndex
+//    val wallIndexKey = getWallIndexKey(receiver)
+//    val newWallIndex = WallIndex(Encrypt(receiver), newIndex, wallEntryKey +: lastWallIndex.entries)
+//    dht.put(wallIndexKey, newWallIndex)
+//  }
 
   // TODO (if time allows): def remove()
 

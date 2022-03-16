@@ -12,7 +12,7 @@ trait PeerMessage
 case class Message(sender: String, text: String, ack: Boolean) extends PeerMessage
 case class Login(location: String, path: String) extends PeerMessage
 case class Logout(location: String) extends PeerMessage
-case class AddWallEntry(text: String) extends PeerMessage
+case class AddWallEntry(sender:String,text: String) extends PeerMessage
 
 
 // for now assume version == 0

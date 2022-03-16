@@ -27,8 +27,8 @@ object AsyncMessage {
         println(res)
         println(s"key $offMsgKey not found in dht")
       }
+      dht.put(offMsgKey, mutable.ListBuffer.empty[OfflineMessage])
     })
-    dht.put(offMsgKey, mutable.ListBuffer.empty[OfflineMessage])
   }
 
   def getKey(owner: String): String = {

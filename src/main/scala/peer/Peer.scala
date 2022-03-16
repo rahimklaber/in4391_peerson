@@ -81,7 +81,7 @@ object Peer {
      * @param msg incoming Akka message
      */
     override def onMessage(msg: PeerMessage): Behavior[PeerMessage] = {
-      context.log.info(s"received message: $msg")
+      context.log.info(s"$mail - received message: $msg")
       msg match {
         case AddWallEntry(sender,text) => {
           addToWall(sender,text)
@@ -91,8 +91,14 @@ object Peer {
             context.log.info(s"$sender send an ack")
           } else {
             context.log.info(s"From: $sender | Message: $text")
-            val send = new SendChatMessage(context, sender, mail, "I got your message", ack = true, dhtNode)
-            send.send()
+            new GetPathByMail(sender, dhtNode,{
+              case Some(senderPath: String) =>
+                GetPeerRef(context, senderPath) ! Message(mail, "I got your message", ack = true)
+              case _ =>
+                AsyncMessage.add(mail, sender, "I got your message", ack = true, dhtNode)
+            }).get()
+//            val send = new SendChatMessage(context, sender, mail, "I got your message", ack = true, dhtNode)
+//            send.send()
           }
 
         case Login(location, path) =>

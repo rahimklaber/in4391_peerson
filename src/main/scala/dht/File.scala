@@ -3,11 +3,11 @@ package dht
 /**
  * a trait to represent the file in communication
  */
-trait File {
+trait File/* {
   val fileName: String
   val fileType: FileType.FileType
   val content: String
-}
+}*/
 
 /**
  * FileType

@@ -3,7 +3,7 @@ package peer
 import akka.actor.typed.scaladsl.ActorContext
 import dht.{DistributedDHT, Encrypt, GetPathByMail}
 
-object SendChatMessage {
+class SendChatMessage(val context: ActorContext[PeerMessage], val sender: String, val receiver: String, val text: String, val ack: Boolean, val dhtNode: DistributedDHT) {
   /**
    * method for chatting
    * @param context ActorContext
@@ -12,8 +12,12 @@ object SendChatMessage {
    * @param text message text
    * @param ack ack
    */
-  def apply(context: ActorContext[PeerMessage], sender: String, receiver: String, text: String, ack: Boolean, dhtNode: DistributedDHT): Unit = {
-    val pathLookUp = GetPathByMail(receiver, dhtNode)
+  def send(): Unit = {
+    val pathLookUp = new GetPathByMail(receiver, dhtNode, onReceivePath)
+    pathLookUp.get()
+  }
+
+  def onReceivePath(pathLookUp:Option[String]): Unit ={
     pathLookUp match {
       case None => println(s"User: $receiver, not found in DHT")
       case Some(receiverPath) =>

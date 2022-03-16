@@ -2,11 +2,25 @@ package peer
 
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
-import dht.{DistributedDHT, Encrypt, File, FileOperations, GetPathByMail, GetPeerKey, LocalDHT, Wall}
+import dht.{DistributedDHT, Encrypt, File, FileOperations, GetPathByMail, GetPeerKey}
 import userData.State.offline
 import userData.{LocatorInfo, LoginProcedure, LogoutProcedure}
+import dht.FileOperations.DHTFileEntry
+import dht.FileType.FileType
+import dht.Wall.WallEntry
+import dht._
+import userData.{LocatorInfo, LoginProcedure, LogoutProcedure, State}
 
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
+
+
+object PeerWall {
+  case class WallIndex(owner: String, lastIndex: Int, entries: ListBuffer[String]) extends File
+
+
+}
+
 
 object Peer {
   def apply(mail: String, dhtNode: DistributedDHT): Behavior[PeerMessage] = {
@@ -29,29 +43,67 @@ object Peer {
      */
     val localFiles: mutable.Map[String, File] = mutable.Map()
 
+    def onLoginSuccess(): Unit ={
+      println("Login successful")
+    }
+
+
+    val WALL_INDEX_KEY = s"${hashedMail}@wi"
+
+
+    var wallIndex = PeerWall.WallIndex(hashedMail, -1, ListBuffer.empty)
+
+    // the peer location, e.g., home / phone
+    var location : String =""
+    // the peer path, like akka://guadian@localhost/....
+    var path : String =""
+
+    /**
+     *
+     * @param sender the hashed mail of the person who added the entry.
+     */
+    def addToWall(sender:String, text: String): Unit = {
+      val newIndex = wallIndex.lastIndex + 1
+      val entryKey = Wall.getWallEntryKey(mail,newIndex)
+      wallIndex.entries.append(entryKey)
+      localFiles.put(entryKey, WallEntry(newIndex,sender, text))                  // is this ok?
+      dhtNode.append(entryKey, DHTFileEntry(hashedMail, LocatorInfo(location,"","",State.active,path), 0)) // for now assume not versioning
+
+      // increment index
+      localFiles.put(WALL_INDEX_KEY, wallIndex.copy(lastIndex = newIndex))
+    }
+
+
     /**
      * message handler
+     *
      * @param msg incoming Akka message
      */
     override def onMessage(msg: PeerMessage): Behavior[PeerMessage] = {
       context.log.info(s"received message: $msg")
       msg match {
+        case AddWallEntry(sender,text) => {
+          addToWall(sender,text)
+        }
         case Message(sender, text, ack) =>
           if (ack) {
             context.log.info(s"$sender send an ack")
           } else {
             context.log.info(s"From: $sender | Message: $text")
-            SendChatMessage(context, sender, mail, "I got your message", ack = true, dhtNode)
+            val send = new SendChatMessage(context, sender, mail, "I got your message", ack = true, dhtNode)
+            send.send()
           }
 
         case Login(location, path) =>
           Wall.load(context, mail,dhtNode)
-          LoginProcedure.start(location, hashedMail, path, dhtNode)
-          println(dhtNode.getAll(hashedMail))
+          this.location = location
+          this.path = path
+          val loginProcedure = new LoginProcedure(location, hashedMail, path, dhtNode, onLoginSuccess)
+          loginProcedure.start()
 
         case Logout(location) =>
-          LogoutProcedure.start(location, hashedMail, dhtNode)
-          println(dhtNode.getAll(hashedMail))
+          val logoutProcedure = new LogoutProcedure(location, hashedMail, dhtNode)
+          logoutProcedure.start()
 
 
         case FileRequest(fileName, version, replyTo) =>
@@ -71,7 +123,7 @@ object Peer {
               /**
                * TODO (if time allows): replace context.self.path.toString to locator
                */
-              FileOperations.add(hashedMail, context.self.path.toString, 0, file,dhtNode)
+//              FileOperations.add(hashedMail, context.self.path.toString, 0, file,dhtNode)
             case None => ()
           }
 
@@ -79,34 +131,28 @@ object Peer {
           cmd match {
             // command the current peer (as sender) to put text on receiver's wall
             case AddToWallCommand(receiver, text) => {
-              val receiverPathLookUp = GetPathByMail(receiver, dhtNode)
-              receiverPathLookUp match {
-                case Some(receiverPath: String) => Wall.add(mail, receiver, text,dhtNode)
-                case None => println("")
-              }
+               new GetPathByMail(receiver, dhtNode,{
+                case Some(receiverPath: String) =>
+                  GetPeerRef(context, receiverPath) ! AddWallEntry(mail,text)
+                case None => println("No path found")
+              }).get()
             }
 
             // command the current peer to request a file
-            case GetFileCommand(fileName, replyTo) => dhtNode.get(fileName) match {
-              /**
-               * TODO (if time allows): replace context.self.path.toString to locator
-               */
+            case GetFileCommand(fileName, replyTo) => dhtNode.get(fileName,{
               case Some(FileOperations.DHTFileEntry(hashedMail, path, version)) =>
                 // actor classic kinda screws up. Instead just send a file request and then handle in explicitly
-                GetPeerRef(context, path) ! FileRequest(fileName, version, context.self)
-            }
+                GetPeerRef(context, path.path) ! FileRequest(fileName, version, context.self)
+            })
 
             // command the current peer to send message
             case SendMessageCommand(receiver, text) =>
-              val pathLookUp = GetPathByMail(receiver, dhtNode)
-              println(pathLookUp)
-              pathLookUp match {
+              new GetPathByMail(receiver,dhtNode,{
                 case Some(receiverPath: String) =>
                   GetPeerRef(context, receiverPath) ! Message(mail, text, ack = false)
                 case _ =>
                   context.self ! PeerCmd(AddToWallCommand(receiver, text))
-              }
-
+              }).get()
             case _ => ()
           }
       }

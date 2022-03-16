@@ -2,6 +2,9 @@ package peer
 
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
+import dht.{DistributedDHT, Encrypt, File, FileOperations, GetPathByMail, GetPeerKey}
+import userData.State.offline
+import userData.{LocatorInfo, LoginProcedure, LogoutProcedure}
 import dht.FileOperations.DHTFileEntry
 import dht.FileType.FileType
 import dht.Wall.WallEntry
@@ -39,6 +42,10 @@ object Peer {
      * Now just create a new Map every time
      */
     val localFiles: mutable.Map[String, File] = mutable.Map()
+
+    def onLoginSuccess(): Unit ={
+      println("Login successful")
+    }
 
 
     val WALL_INDEX_KEY = s"${hashedMail}@wi"
@@ -83,19 +90,21 @@ object Peer {
             context.log.info(s"$sender send an ack")
           } else {
             context.log.info(s"From: $sender | Message: $text")
-            SendChatMessage(context, sender, mail, "I got your message", ack = true, dhtNode)
+            val send = new SendChatMessage(context, sender, mail, "I got your message", ack = true, dhtNode)
+            send.send()
           }
 
         case Login(location, path) =>
           Wall.load(context, mail,dhtNode)
-          LoginProcedure.start(location, hashedMail, path, dhtNode)
           this.location = location
           this.path = path
           println(dhtNode.getAll(hashedMail))
+          val loginProcedure = new LoginProcedure(location, hashedMail, path, dhtNode, onLoginSuccess)
+          loginProcedure.start()
 
         case Logout(location) =>
-          LogoutProcedure.start(location, hashedMail, dhtNode)
-          println(dhtNode.getAll(hashedMail))
+          val logoutProcedure = new LogoutProcedure(location, hashedMail, dhtNode)
+          logoutProcedure.start()
 
 
         case FileRequest(fileName, version, replyTo) =>

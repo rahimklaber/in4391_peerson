@@ -1,7 +1,7 @@
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.util.Timeout
-import dht.{DHT, DistributedDHT, GetPeerKey, LocalDHT, Wall}
+import dht.{DHT, DistributedDHT, GetPeerKey}
 import peer.{AddToWallCommand, FileRequest, GetFileCommand, PeerCmd, PeerMessage, SendMessageCommand}
 
 import scala.collection.mutable

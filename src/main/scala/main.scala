@@ -144,6 +144,7 @@ object Guardian {
               userRef ! peer.Logout(location)
               context.stop(userRef)
               peers.remove(GetPeerKey(user, location))
+              println("Logout successful")
             case _ =>
               println(s"User ${user} currently unavailable")
           }

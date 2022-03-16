@@ -2,6 +2,7 @@ package peer
 
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
+import dht.AsyncMessage.OfflineMessage
 import dht.{DistributedDHT, Encrypt, File, FileOperations, GetPathByMail, GetPeerKey}
 import userData.State.offline
 import userData.{LocatorInfo, LoginProcedure, LogoutProcedure}
@@ -80,7 +81,7 @@ object Peer {
      * @param msg incoming Akka message
      */
     override def onMessage(msg: PeerMessage): Behavior[PeerMessage] = {
-      context.log.info(s"received message: $msg")
+      context.log.info(s"$mail - received message: $msg")
       msg match {
         case AddWallEntry(sender,text) => {
           addToWall(sender,text)
@@ -90,12 +91,19 @@ object Peer {
             context.log.info(s"$sender send an ack")
           } else {
             context.log.info(s"From: $sender | Message: $text")
-            val send = new SendChatMessage(context, sender, mail, "I got your message", ack = true, dhtNode)
-            send.send()
+            new GetPathByMail(sender, dhtNode,{
+              case Some(senderPath: String) =>
+                GetPeerRef(context, senderPath) ! Message(mail, "I got your message", ack = true)
+              case _ =>
+                AsyncMessage.add(mail, sender, "I got your message", ack = true, dhtNode)
+            }).get()
+//            val send = new SendChatMessage(context, sender, mail, "I got your message", ack = true, dhtNode)
+//            send.send()
           }
 
         case Login(location, path) =>
-          Wall.load(context, mail,dhtNode)
+//          Wall.load(context, mail,dhtNode)
+          AsyncMessage.load(context, mail, dhtNode)
           this.location = location
           this.path = path
           val loginProcedure = new LoginProcedure(location, hashedMail, path, dhtNode, onLoginSuccess)
@@ -138,6 +146,10 @@ object Peer {
               }).get()
             }
 
+            case AddOfflineMessage(receiver, text, ack) => {
+              AsyncMessage.add(mail, receiver, text, ack, dhtNode)
+            }
+
             // command the current peer to request a file
             case GetFileCommand(fileName, replyTo) => dhtNode.get(fileName,{
               case Some(FileOperations.DHTFileEntry(hashedMail, path, version)) =>
@@ -151,10 +163,18 @@ object Peer {
                 case Some(receiverPath: String) =>
                   GetPeerRef(context, receiverPath) ! Message(mail, text, ack = false)
                 case _ =>
-                  context.self ! PeerCmd(AddToWallCommand(receiver, text))
+                  context.self ! PeerCmd(AddOfflineMessage(receiver, text, ack = false))
               }).get()
             case _ => ()
           }
+
+        case Notification(content) => {
+          content match {
+            case OfflineMessage(sender: String, content: String, ack: Boolean) => {
+              context.self ! Message(sender, content, ack)
+            }
+          }
+        }
       }
       this
     }

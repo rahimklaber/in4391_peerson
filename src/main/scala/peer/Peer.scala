@@ -142,7 +142,7 @@ object Peer {
                new GetPathByMail(receiver, dhtNode,{
                 case Some(receiverPath: String) =>
                   GetPeerRef(context, receiverPath) ! AddWallEntry(mail,text)
-                case None => println("No path found")
+                case None => AsyncMessage.AddWallEntry(mail,receiver,text,dhtNode)
               }).get()
             }
 
@@ -173,6 +173,7 @@ object Peer {
             case OfflineMessage(sender: String, content: String, ack: Boolean) => {
               context.self ! Message(sender, content, ack)
             }
+            case WallEntry(_,sender,content) => addToWall(sender,content)
           }
         }
       }

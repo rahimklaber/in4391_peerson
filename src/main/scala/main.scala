@@ -185,15 +185,15 @@ object main extends App {
 //      case "add-wall-by-guardian" =>
 //        AddWallByGuardian(readLine("owner: ").strip, readLine("text: ").strip)
       case "request-file-by-user" =>
-        RequestFileByUser(readLine("requester: ").strip, readLine("responder: ").strip,
+        RequestFileByUser(readLine("requester: ").strip, ""/*readLine("responder: ").strip*/,
           readLine("fileName: ").strip, version = 0)
-      case "request-file-by-guardian" =>
-        RequestFileByGuardian(readLine("responder: ").strip, readLine("fileName: ").strip, version = 0)
-      case "send-file-by-user" =>
-        SendFileByUser(readLine("sender: ").strip, readLine("receiver: ").strip,
-          readLine("fileName: ").strip, version = 0)
-      case "send-file-by-guardian" =>
-        SendFileByGuardian(readLine("receiver: ").strip, readLine("fileName: ").strip, version = 0)
+//      case "request-file-by-guardian" =>
+//        RequestFileByGuardian(readLine("responder: ").strip, readLine("fileName: ").strip, version = 0)
+//      case "send-file-by-user" =>
+//        SendFileByUser(readLine("sender: ").strip, readLine("receiver: ").strip,
+//          readLine("fileName: ").strip, version = 0)
+//      case "send-file-by-guardian" =>
+//        SendFileByGuardian(readLine("receiver: ").strip, readLine("fileName: ").strip, version = 0)
       case "login" =>
         Login(readLine("email: ").strip, readLine("location: ").strip)
       case "logout" =>

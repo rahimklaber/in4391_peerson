@@ -142,7 +142,7 @@ object Peer {
                new GetPathByMail(receiver, dhtNode,{
                 case Some(receiverPath: String) =>
                   GetPeerRef(context, receiverPath) ! AddWallEntry(mail,text)
-                case None => println("No path found")
+                case None => AsyncMessage.AddWallEntry(mail,receiver,text,dhtNode)
               }).get()
             }
 
@@ -151,8 +151,8 @@ object Peer {
             }
 
             // command the current peer to request a file
-            case GetFileCommand(fileName, replyTo) => dhtNode.get(fileName,{
-              case Some(FileOperations.DHTFileEntry(hashedMail, path, version)) =>
+            case GetFileCommand(fileName, replyTo) => dhtNode.getAll(fileName,{
+              case Some(FileOperations.DHTFileEntry(hashedMail, path, version)::xs) =>
                 // actor classic kinda screws up. Instead just send a file request and then handle in explicitly
                 GetPeerRef(context, path.path) ! FileRequest(fileName, version, context.self)
             })
@@ -173,6 +173,7 @@ object Peer {
             case OfflineMessage(sender: String, content: String, ack: Boolean) => {
               context.self ! Message(sender, content, ack)
             }
+            case WallEntry(_,sender,content) => addToWall(sender,content)
           }
         }
       }

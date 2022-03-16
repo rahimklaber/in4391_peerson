@@ -98,7 +98,6 @@ object Peer {
           Wall.load(context, mail,dhtNode)
           this.location = location
           this.path = path
-          println(dhtNode.getAll(hashedMail))
           val loginProcedure = new LoginProcedure(location, hashedMail, path, dhtNode, onLoginSuccess)
           loginProcedure.start()
 
@@ -132,35 +131,28 @@ object Peer {
           cmd match {
             // command the current peer (as sender) to put text on receiver's wall
             case AddToWallCommand(receiver, text) => {
-              val receiverPathLookUp = GetPathByMail(receiver, dhtNode)
-              receiverPathLookUp match {
+               new GetPathByMail(receiver, dhtNode,{
                 case Some(receiverPath: String) =>
                   GetPeerRef(context, receiverPath) ! AddWallEntry(mail,text)
-                case None => println("")
-              }
+                case None => println("No path found")
+              }).get()
             }
 
             // command the current peer to request a file
-            case GetFileCommand(fileName, replyTo) => dhtNode.get(fileName) match {
-              /**
-               * TODO (if time allows): replace context.self.path.toString to locator
-               */
+            case GetFileCommand(fileName, replyTo) => dhtNode.get(fileName,{
               case Some(FileOperations.DHTFileEntry(hashedMail, path, version)) =>
                 // actor classic kinda screws up. Instead just send a file request and then handle in explicitly
                 GetPeerRef(context, path.path) ! FileRequest(fileName, version, context.self)
-            }
+            })
 
             // command the current peer to send message
             case SendMessageCommand(receiver, text) =>
-              val pathLookUp = GetPathByMail(receiver, dhtNode)
-              println(pathLookUp)
-              pathLookUp match {
+              new GetPathByMail(receiver,dhtNode,{
                 case Some(receiverPath: String) =>
                   GetPeerRef(context, receiverPath) ! Message(mail, text, ack = false)
                 case _ =>
                   context.self ! PeerCmd(AddToWallCommand(receiver, text))
-              }
-
+              }).get()
             case _ => ()
           }
       }

@@ -26,7 +26,9 @@ class GetPathByMail(val mail: String, val DistributedDHT: DistributedDHT, val ca
         } else {
           callback(Some(validLocatorInfoList.head.path))
         }
-      case _ => callback(None)
+      case _ => {
+        callback(None)
+      }
     }
   }
 }

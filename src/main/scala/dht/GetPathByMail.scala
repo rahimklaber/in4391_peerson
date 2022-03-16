@@ -1,7 +1,7 @@
 package dht
 import userData.{LocatorInfo, State}
 
-class GetPathByMail(val mail: String, val DistributedDHT: DistributedDHT, val callback: Option[String] => Unit) {
+class GetPathByMail(val mail: String, val distributedDHT: DistributedDHT, val callback: Option[String] => Unit) {
 
   /**
    * find a current active/online actor's path purely based on its mail
@@ -11,7 +11,7 @@ class GetPathByMail(val mail: String, val DistributedDHT: DistributedDHT, val ca
    */
   def get() {
     val hashedMail: String = Encrypt(mail)
-   DistributedDHT.getAll(hashedMail, onReceivedLookup)
+    distributedDHT.getAll(hashedMail, onReceivedLookup)
   }
 
   def onReceivedLookup(lookup:Option[List[Any]]): Unit ={

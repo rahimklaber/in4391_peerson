@@ -1,7 +1,7 @@
 package dht
 import userData.{LocatorInfo, State}
 
-object GetPathByMail {
+class GetPathByMail(val mail: String, val DistributedDHT: DistributedDHT, val callback: Option[String] => Unit) {
 
   /**
    * find a current active/online actor's path purely based on its mail
@@ -9,10 +9,12 @@ object GetPathByMail {
    * @param mail mail to look up
    * @return path if exists, else None
    */
-  def apply(mail: String, DistributedDHT: DistributedDHT): Option[String] = {
-    val hashedMail: String = dht.Encrypt(mail)
-//    val lookup = LocalDHT.getAll(hashedMail)
-    val lookup = DistributedDHT.getAll(hashedMail)
+  def get() {
+    val hashedMail: String = Encrypt(mail)
+   DistributedDHT.getAll(hashedMail, onReceivedLookup)
+  }
+
+  def onReceivedLookup(lookup:Option[List[Any]]): Unit ={
     println(lookup)
     lookup match {
       case Some(value: List[LocatorInfo]) =>
@@ -20,17 +22,11 @@ object GetPathByMail {
         val validLocatorInfoList = value.filter(l => l.state == State.active || l.state == State.online)
         if (validLocatorInfoList.isEmpty) {
           println(s"peer ${mail} not found by DHT")
-          None
+          callback(None)
         } else {
-//          val location = validLocatorInfoList.head.locator
-//          val pathLookUp = LocalDHT.get(GetPeerKey(mail, location))
-//          pathLookUp match {
-//            case Some(path: String) => Some(path)
-//            case _ => None
-//          }
-          Some(validLocatorInfoList.head.path)
+          callback(Some(validLocatorInfoList.head.path))
         }
-      case _ => None
+      case _ => callback(None)
     }
   }
 }

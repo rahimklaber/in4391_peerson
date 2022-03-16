@@ -1,7 +1,7 @@
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.util.Timeout
-import dht.{DHT, DistributedDHT, GetPeerKey, LocalDHT, Wall}
+import dht.{DHT, DistributedDHT, GetPeerKey}
 import peer.{AddToWallCommand, FileRequest, GetFileCommand, PeerCmd, PeerMessage, SendMessageCommand}
 
 import scala.collection.mutable
@@ -79,9 +79,9 @@ object Guardian {
               println(s"Owner ${owner} currently unavailable")
           }
         }
-        case AddWallByGuardian(owner: String, text: String) => {
-          Wall.add("", owner, text,dht)
-        }
+//        case AddWallByGuardian(owner: String, text: String) => {
+//          Wall.add("", owner, text,dht)
+//        }
         case RequestFileByUser(requester: String, responder: String, fileName: String, version: Int) =>
           val lookup = getPeerRefByGuardian(requester)
           lookup match {

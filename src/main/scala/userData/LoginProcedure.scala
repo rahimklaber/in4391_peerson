@@ -1,37 +1,21 @@
 package userData
 
-import dht.{DistributedDHT, LocalDHT}
+import dht.{DistributedDHT}
 
 import java.io.{BufferedReader, InputStreamReader}
 import java.net.URL
 
-object LoginProcedure {
+class LoginProcedure(val location: String, val hashedMail: String, val path: String, val DistributedDHT: DistributedDHT, callback: () => Unit) {
 
-  /**
-   * the start stage of login process
-   */
-  def start(location: String, hashedMail: String, path: String, DistributedDHT: DistributedDHT): Unit = {
-    /*
-    * Possible cases
-    * 1. never been registered
-    * 2. still logged in at the same device
-    * 3. offline at the same device
-    * 4. online at a different device
-    * 5. offline at a different device
-    * */
+  def start() = {
+    DistributedDHT.contains(hashedMail, recievedContains)
+  }
 
-    // for testing
-    //    val inf = LocatorInfo("home", findIPAddress(), "80", State.active)
-    //    val inf = LocatorInfo("home", findIPAddress(), "80", State.offline)
-    //    val inf = LocatorInfo("laptop", findIPAddress(), "80", State.online)
-    // val inf = LocatorInfo("laptop", findIPAddress(), "80", State.offline)
-    // LocalDHT.put(hashedMail, inf)
-
-    // choose between login and register
-    if (DistributedDHT.contains(hashedMail)) {
-      login(location, hashedMail, path, DistributedDHT)
+  def recievedContains(contains: Boolean) ={
+    if (contains) {
+      login()
     } else {
-      register(location, hashedMail, path, DistributedDHT)
+      register()
     }
   }
 
@@ -40,9 +24,12 @@ object LoginProcedure {
    * @param location location in string, say "laptop", "home"
    * @param hashedMail hashedMail
    */
-  def login(location: String, hashedMail: String, path: String,DistributedDHT: DistributedDHT): Unit = {
+  def login() = {
     // 1. get user info from the DHT
-    val userLocatorInfos: Option[List[Any]] = DistributedDHT.getAll(hashedMail)
+    DistributedDHT.getAll(hashedMail, receivedUserInfo)
+  }
+
+  def receivedUserInfo(userLocatorInfos: Option[List[Any]]) ={
     var locationInfoList: List[LocatorInfo] = userLocatorInfos match {
       case Some(value) => value.asInstanceOf[List[LocatorInfo]]
       case None => throw new Exception()  // TODO: handle error
@@ -71,16 +58,18 @@ object LoginProcedure {
     })
 
     // 4. send new info to DHT
-//    LocalDHT.put(hashedMail, updateUserInfo.head)
-//    updateUserInfo.tail.foreach(l => LocalDHT.append(hashedMail, l))
+    //    LocalDHT.put(hashedMail, updateUserInfo.head)
+    //    updateUserInfo.tail.foreach(l => LocalDHT.append(hashedMail, l))
     DistributedDHT.put(hashedMail, updateUserInfo)
+    callback()
   }
 
-  def register(location: String, hashedMail: String, path: String, DistributedDHT: DistributedDHT): Unit = {
+  def register(): Unit = {
     val ip = findIPAddress()
     val port = "80"
     val locatorInfo = LocatorInfo(location, ip, port, State.active, path)
     DistributedDHT.put(hashedMail, locatorInfo :: Nil)
+    callback()
   }
 
   def findIPAddress(): String = {

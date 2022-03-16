@@ -1,13 +1,12 @@
 package dht
 
 import net.tomp2p.dht.{FutureGet, PeerBuilderDHT, PeerDHT}
-import net.tomp2p.futures.FutureBootstrap
+import net.tomp2p.futures.{BaseFuture, BaseFutureAdapter, FutureBootstrap}
 import net.tomp2p.p2p.PeerBuilder
 import net.tomp2p.peers.Number160
 import net.tomp2p.storage.Data
 
 import java.net.InetAddress
-import java.util.logging.LogManager
 
 class DistributedDHT(nodeId: Int) extends DHT {
 
@@ -19,39 +18,74 @@ class DistributedDHT(nodeId: Int) extends DHT {
   fb.awaitUninterruptibly
   if (fb.isSuccess) peer.peer.discover.peerAddress(fb.bootstrapTo.iterator.next).start.awaitUninterruptibly
 
-  override def put(key: String, data: Any): Unit = {
-    peer.put(Number160.createHash(key)).data(new Data(data)).start.awaitUninterruptibly
-  }
 
-  override def get(key: String): Option[Any] = {
+
+  // METHODS FOR RETRIEVING FROM DHT
+  override def get(key: String, callback: Option[Any] => Unit) = {
     val futureGet = peer.get(Number160.createHash(key)).start
-    futureGet.awaitUninterruptibly
-    if (futureGet.isSuccess) return Some(futureGet.dataMap.values.iterator.next.`object`())
-    null
+
+    futureGet.addListener(new BaseFutureAdapter[BaseFuture] {
+
+      override def operationComplete(future: BaseFuture): Unit = {
+        if(future.isSuccess()) {
+          callback(Some(futureGet.dataMap.values.iterator.next.`object`()))
+        } else {
+          callback(null)
+        }
+      }
+
+      })
   }
 
-  override def contains(key: String): Boolean = {
+  override def getAll(key: String, callback: Option[List[Any]] => Unit) {
+
     val futureGet = peer.get(Number160.createHash(key)).start
-    futureGet.awaitUninterruptibly
-    if (!futureGet.isSuccess) return false
-    println(futureGet.dataMap())
-    if(futureGet.isEmpty) return false
-    true
+
+    futureGet.addListener(new BaseFutureAdapter[BaseFuture] {
+
+      override def operationComplete(future: BaseFuture): Unit = {
+        if(future.isSuccess()) {
+          val value = futureGet.dataMap.values.iterator.next.`object`()
+          value match {
+            case Some(v) => callback(Some(v.asInstanceOf[List[Any]]))
+            case _ => callback(None)
+          }
+        } else {
+          callback(None)
+        }
+      }
+
+    })
   }
 
-  override def getAll(key: String): Option[List[Any]] = {
-    val value = get(key)
-    value match {
-      case Some(v) => Some(v.asInstanceOf[List[Any]])
-      case _ => None
-    }
+  override def contains(key: String, callback: Boolean => Unit) = {
+    val futureGet = peer.get(Number160.createHash(key)).start
+
+    futureGet.addListener(new BaseFutureAdapter[BaseFuture] {
+
+      override def operationComplete(future: BaseFuture): Unit = {
+        if(future.isSuccess()) {
+          if (futureGet.isEmpty) {
+            callback(false)
+          } else {
+            callback(true)
+          }
+        } else {
+          callback(false)
+        }
+      }
+    })
   }
 
-  /**
-   * remove a key-value pair
-   */
+
+
+  // METHODS FOR PUTTING IN THE DHT
   override def remove(key: String): Unit = {
     peer.remove(Number160.createHash(key)).start()
+  }
+
+  override def put(key: String, data: Any): Unit = {
+    peer.put(Number160.createHash(key)).data(new Data(data)).start()
   }
 
   override def append(key: String, data: Any): Unit = ???

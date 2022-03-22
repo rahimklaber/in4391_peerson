@@ -1,22 +1,11 @@
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
-import akka.util.Timeout
 import dht.{DHT, DistributedDHT, GetPeerKey}
-import peer.{AddToWallCommand, FileRequest, GetFileCommand, PeerCmd, PeerMessage, SendMessageCommand}
+import peer.{AddToWallCommand, GetFileCommand, PeerCmd, PeerMessage, SendMessageCommand}
 
 import scala.collection.mutable
-import scala.concurrent.duration.DurationInt
 import scala.io.StdIn.readLine
-import akka.actor.typed.scaladsl.AskPattern.{Askable, schedulerFromActorSystem}
 import com.typesafe.config.ConfigFactory
-
-
-/**
- * Based on LoginProcedure
- * All the registered users will store
- * (hashedMail, List(LocatorInfo(location, IP, port, state))
- * in DHT
- */
 
 object Guardian {
 
@@ -61,15 +50,6 @@ object Guardian {
           }
         }
 
-        /**
-         * inspect DHT
-         */
-        case InspectDHT() =>
-//          LocalDHT.printElement()
-
-        /**
-         * TODO: The following cases
-         */
         case AddWallByUser(sender: String, owner: String, text: String) =>  {
           val lookup = getPeerRefByGuardian(sender)
           lookup match {
@@ -79,9 +59,7 @@ object Guardian {
               println(s"Owner ${owner} currently unavailable")
           }
         }
-//        case AddWallByGuardian(owner: String, text: String) => {
-//          Wall.add("", owner, text,dht)
-//        }
+
         case RequestFileByUser(requester: String, responder: String, fileName: String, version: Int) =>
           val lookup = getPeerRefByGuardian(requester)
           lookup match {
@@ -90,27 +68,8 @@ object Guardian {
             case _ =>
               println(s"Peer ${requester } currently unavailable")
           }
-        case RequestFileByGuardian(responder: String, fileName: String, version: Int) => {
-          val lookup = getPeerRefByGuardian(responder)
-          lookup match {
-            case Some(senderRef: ActorRef[PeerMessage]) =>
-              implicit val system = context.system
-              implicit val timeout : Timeout = 1.seconds
-              val future = senderRef.ask(ref => FileRequest(fileName,0,ref))
-              implicit val ec = system.executionContext
-              future.onComplete(println)
-            case _ =>
-              println(s"Peer ${responder} currently unavailable")
-          }
 
-        }
-        case SendFileByUser(sender: String, receiver: String, fileName: String, version: Int) => ()
-        case SendFileByGuardian(receiver: String, fileName: String, version: Int) => ()
 
-        /**
-         * Login
-         * Every login spawns a new context
-         */
         case Login(user: String, location: String) =>
           val peerKey = GetPeerKey(user, location)
           // I have to take `peerKey` out as a separate variable or it may throw an error
@@ -134,9 +93,6 @@ object Guardian {
             peerRef ! peer.Login(location, peerPath)
           }
 
-        /**
-         * TODO: Logout
-         */
         case Logout(user: String, location: String) =>
           val lookup = getPeerRefByGuardian(user)
           lookup match {
@@ -153,56 +109,51 @@ object Guardian {
       }
       Behaviors.same
     }
-
   }
 }
 
 
+
 object main extends App {
-  // Call the apply method of the Guardian object with parameter 2
-  // start the ActorSystem named "guardian"
 
-//  val config = ConfigFactory.load("remote_application")
+  var isRemote = false
+  if(args.length > 0){
+    isRemote = true
+  }
 
-  val guardian = ActorSystem(Guardian(), "guardian"/*,config*/)
-
+  val guardian = setupGuardian(isRemote)
   println(guardian.path)
   println(guardian.address)
 
-  /**
-   * receiving commands from REPL
-   */
   while (true) {
     println("Guardian waits for your command")
     val input = readLine.strip.split(" ")
     val command: REPLCommand = input.head match {
-      case "send-message" =>
-        SendMessage(readLine("sender: ").strip, readLine("receiver: ").strip, readLine("text: ").strip)
-      case "inspect-dht" =>
-        InspectDHT()
-      case "add-wall-by-user" =>
-        AddWallByUser(readLine("sender: ").strip, readLine("owner: ").strip,  readLine("text: ").strip)
-//      case "add-wall-by-guardian" =>
-//        AddWallByGuardian(readLine("owner: ").strip, readLine("text: ").strip)
-      case "request-file-by-user" =>
-        RequestFileByUser(readLine("requester: ").strip, ""/*readLine("responder: ").strip*/,
-          readLine("fileName: ").strip, version = 0)
-//      case "request-file-by-guardian" =>
-//        RequestFileByGuardian(readLine("responder: ").strip, readLine("fileName: ").strip, version = 0)
-//      case "send-file-by-user" =>
-//        SendFileByUser(readLine("sender: ").strip, readLine("receiver: ").strip,
-//          readLine("fileName: ").strip, version = 0)
-//      case "send-file-by-guardian" =>
-//        SendFileByGuardian(readLine("receiver: ").strip, readLine("fileName: ").strip, version = 0)
       case "login" =>
         Login(readLine("email: ").strip, readLine("location: ").strip)
       case "logout" =>
         Logout(readLine("email: ").strip, readLine("location: ").strip)
+      case "send-message" =>
+        SendMessage(readLine("sender: ").strip, readLine("receiver: ").strip, readLine("text: ").strip)
+      case "add-wall-by-user" =>
+        AddWallByUser(readLine("sender: ").strip, readLine("owner: ").strip,  readLine("text: ").strip)
+      case "request-file-by-user" =>
+        RequestFileByUser(readLine("requester: ").strip, ""/*readLine("responder: ").strip*/,
+          readLine("fileName: ").strip, version = 0)
       case "exit" =>
         sys.exit
       case _ => new REPLCommand {}
     }
     guardian ! command
+  }
+
+  def setupGuardian(isRemote: Boolean): ActorSystem[REPLCommand] ={
+    if (isRemote){
+      val config = ConfigFactory.load("remote_application")
+      ActorSystem(Guardian(), "guardian",config)
+    } else {
+      ActorSystem(Guardian(), "guardian")
+    }
   }
 }
 

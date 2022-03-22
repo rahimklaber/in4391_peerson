@@ -4,6 +4,11 @@
 
 trait REPLCommand
 
+/**
+ * REPL lets `user` to login
+ * @param user user email (not hashed)
+ * @param location location string
+ */
 case class Login(user: String, location: String) extends REPLCommand
 
 /**
@@ -28,7 +33,6 @@ case class SendMessage(sender: String, receiver: String, text: String) extends R
  * @param text message text
  */
 case class AddWallByUser(sender: String, owner: String, text: String) extends REPLCommand
-
 
 /**
  * REPL lets `requester` to request a file `fileName` of `version` from responder`

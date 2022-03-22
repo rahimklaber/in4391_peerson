@@ -2,7 +2,7 @@ package dht
 
 import akka.actor.typed.scaladsl.ActorContext
 import peer.PeerMessage
-import userData.LocatorInfo
+import login.LocatorInfo
 
 object FileOperations {
   /**

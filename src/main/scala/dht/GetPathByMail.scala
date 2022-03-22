@@ -1,5 +1,5 @@
 package dht
-import userData.{LocatorInfo, State}
+import login.{LocatorInfo, State}
 
 class GetPathByMail(val mail: String, val distributedDHT: DistributedDHT, val callback: Option[String] => Unit) {
 

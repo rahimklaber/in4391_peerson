@@ -4,13 +4,13 @@ import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import dht.AsyncMessage.OfflineMessage
 import dht.{DistributedDHT, Encrypt, File, FileOperations, GetPathByMail, GetPeerKey}
-import userData.State.offline
-import userData.{LocatorInfo, LoginProcedure, LogoutProcedure}
+import login.State.offline
+import login.{LocatorInfo, LoginProcedure, LogoutProcedure}
 import dht.FileOperations.DHTFileEntry
 import dht.FileType.FileType
 import dht.Wall.WallEntry
 import dht._
-import userData.{LocatorInfo, LoginProcedure, LogoutProcedure, State}
+import login.{LocatorInfo, LoginProcedure, LogoutProcedure, State}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer

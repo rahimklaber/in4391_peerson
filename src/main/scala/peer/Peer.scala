@@ -6,12 +6,9 @@ import logic.async_messages.AsyncMessage
 import file.{File, FileOperations}
 import logic.async_messages.AsyncMessage.OfflineMessage
 import dht.DistributedDHT
-import logic.login.State.offline
+import file.FileOperations.DHTFileEntry
 import logic.login.{LocatorInfo, LoginProcedure, LogoutProcedure, State}
-import file.FileType.FileType
 import logic.wall.Wall.WallEntry
-import dht._
-import logic.LogoutProcedure
 import logic.wall.Wall
 import services.{Encrypt, GetPathByMail, GetPeerRef}
 

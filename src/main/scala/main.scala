@@ -58,6 +58,18 @@ object Guardian {
             peerRef ! peer.Login(location, peerPath)
           }
 
+        case Logout(user: String, location: String) =>
+          val lookup = getPeerRefByGuardian(user)
+          lookup match {
+            case Some(userRef: ActorRef[PeerMessage]) =>
+              userRef ! peer.Logout(location)
+              context.stop(userRef)
+              peers.remove(GetPeerKey(user, location))
+              println("Logout successful")
+            case _ =>
+              println(s"User ${user} currently unavailable")
+          }
+
         /**
          * 1. if any location of receiver is found active/online, send message
          * 2. if not, add to wall
@@ -89,18 +101,6 @@ object Guardian {
               requesterRef ! PeerCmd(GetFileCommand(fileName,null))
             case _ =>
               println(s"Peer ${requester } currently unavailable")
-          }
-
-        case Logout(user: String, location: String) =>
-          val lookup = getPeerRefByGuardian(user)
-          lookup match {
-            case Some(userRef: ActorRef[PeerMessage]) =>
-              userRef ! peer.Logout(location)
-              context.stop(userRef)
-              peers.remove(GetPeerKey(user, location))
-              println("Logout successful")
-            case _ =>
-              println(s"User ${user} currently unavailable")
           }
 
         case _ => ()

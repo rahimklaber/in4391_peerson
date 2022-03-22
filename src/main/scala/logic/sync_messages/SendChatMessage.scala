@@ -1,7 +1,8 @@
-package peer
+package logic.sync_messages
 
 import akka.actor.typed.scaladsl.ActorContext
-import dht.{DistributedDHT, Encrypt, GetPathByMail}
+import dht.DistributedDHT
+import peer.PeerMessage
 
 /**
  * No longer used

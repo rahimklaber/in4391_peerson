@@ -2,15 +2,18 @@ package peer
 
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
-import dht.AsyncMessage.OfflineMessage
-import dht.{DistributedDHT, Encrypt, File, FileOperations, GetPathByMail, GetPeerKey}
-import login.State.offline
-import login.{LocatorInfo, LoginProcedure, LogoutProcedure}
-import dht.FileOperations.DHTFileEntry
-import dht.FileType.FileType
-import dht.Wall.WallEntry
+import logic.async_messages.AsyncMessage
+import file.{File, FileOperations}
+import logic.async_messages.AsyncMessage.OfflineMessage
+import dht.DistributedDHT
+import logic.login.State.offline
+import logic.login.{LocatorInfo, LoginProcedure, LogoutProcedure, State}
+import file.FileType.FileType
+import logic.wall.Wall.WallEntry
 import dht._
-import login.{LocatorInfo, LoginProcedure, LogoutProcedure, State}
+import logic.LogoutProcedure
+import logic.wall.Wall
+import services.{Encrypt, GetPathByMail, GetPeerRef}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -141,7 +144,7 @@ object Peer {
             case AddToWallCommand(receiver, text) => {
                new GetPathByMail(receiver, dhtNode,{
                 case Some(receiverPath: String) =>
-                  GetPeerRef(context, receiverPath) ! AddWallEntry(mail,text)
+                  services.GetPeerRef(context, receiverPath) ! AddWallEntry(mail,text)
                 case None => AsyncMessage.AddWallEntry(mail,receiver,text,dhtNode)
               }).get()
             }
@@ -154,14 +157,14 @@ object Peer {
             case GetFileCommand(fileName, replyTo) => dhtNode.getAll(fileName,{
               case Some(FileOperations.DHTFileEntry(hashedMail, path, version)::xs) =>
                 // actor classic kinda screws up. Instead just send a file request and then handle in explicitly
-                GetPeerRef(context, path.path) ! FileRequest(fileName, version, context.self)
+                services.GetPeerRef(context, path.path) ! FileRequest(fileName, version, context.self)
             })
 
             // command the current peer to send message
             case SendMessageCommand(receiver, text) =>
               new GetPathByMail(receiver,dhtNode,{
                 case Some(receiverPath: String) =>
-                  GetPeerRef(context, receiverPath) ! Message(mail, text, ack = false)
+                  services.GetPeerRef(context, receiverPath) ! Message(mail, text, ack = false)
                 case _ =>
                   context.self ! PeerCmd(AddOfflineMessage(receiver, text, ack = false))
               }).get()

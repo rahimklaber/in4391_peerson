@@ -1,6 +1,6 @@
-package login
+package logic.login
 
-import dht.{DistributedDHT, GetPeerKey}
+import dht.DistributedDHT
 
 class LogoutProcedure(val location: String, val hashedMail: String, val DistributedDHT: DistributedDHT) {
 

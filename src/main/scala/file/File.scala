@@ -1,4 +1,4 @@
-package dht
+package file
 
 /**
  * a trait to represent the file in communication

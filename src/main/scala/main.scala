@@ -1,11 +1,12 @@
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
-import dht.{DHT, DistributedDHT, GetPeerKey}
+import dht.{DHT, DistributedDHT}
 import peer.{AddToWallCommand, GetFileCommand, PeerCmd, PeerMessage, SendMessageCommand}
 
 import scala.collection.mutable
 import scala.io.StdIn.readLine
 import com.typesafe.config.ConfigFactory
+import services.GetPeerKey
 
 object Guardian {
 

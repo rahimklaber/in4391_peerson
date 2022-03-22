@@ -1,6 +1,6 @@
-package login
+package logic.login
 
-import dht.{DistributedDHT}
+import dht.DistributedDHT
 
 import java.io.{BufferedReader, InputStreamReader}
 import java.net.URL

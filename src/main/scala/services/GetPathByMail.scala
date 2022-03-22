@@ -1,5 +1,8 @@
-package dht
-import login.{LocatorInfo, State}
+package services
+
+import dht.DistributedDHT
+import logic.State
+import logic.login.{LocatorInfo, State}
 
 class GetPathByMail(val mail: String, val distributedDHT: DistributedDHT, val callback: Option[String] => Unit) {
 

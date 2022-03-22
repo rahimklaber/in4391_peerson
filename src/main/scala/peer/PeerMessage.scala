@@ -1,7 +1,7 @@
 package peer
 
 import akka.actor.typed.ActorRef
-import dht.File
+import file.File
 
 trait PeerMessage
 

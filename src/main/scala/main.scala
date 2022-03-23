@@ -18,7 +18,7 @@ object Guardian {
      */
     val peers: mutable.Map[String, ActorRef[PeerMessage]] = mutable.Map()
 
-    var counter = 1
+    var counter = 3
     var dht : DHT = null // for wall add
     /**
      * get ActorRef if the message sender is now active/online
@@ -133,9 +133,9 @@ object main extends App {
         Logout(readLine("email: ").strip, readLine("location: ").strip)
       case "send-message" =>
         SendMessage(readLine("sender: ").strip, readLine("receiver: ").strip, readLine("text: ").strip)
-      case "add-wall-by-user" =>
+      case "add-to-wall" =>
         AddWallByUser(readLine("sender: ").strip, readLine("owner: ").strip,  readLine("text: ").strip)
-      case "request-file-by-user" =>
+      case "request-wall" =>
         RequestFileByUser(readLine("requester: ").strip, ""/*readLine("responder: ").strip*/,
           readLine("fileName: ").strip, version = 0)
       case "exit" =>

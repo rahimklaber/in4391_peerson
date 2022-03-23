@@ -18,8 +18,6 @@ import scala.collection.mutable.ListBuffer
 
 object PeerWall {
   case class WallIndex(owner: String, lastIndex: Int, entries: ListBuffer[String]) extends File
-
-
 }
 
 
@@ -138,17 +136,15 @@ object Peer {
         case PeerCmd(cmd) =>
           cmd match {
             // command the current peer (as sender) to put text on receiver's wall
-            case AddToWallCommand(receiver, text) => {
-               new GetPathByMail(receiver, dhtNode,{
-                case Some(receiverPath: String) =>
-                  services.GetPeerRef(context, receiverPath) ! AddWallEntry(mail,text)
-                case None => AsyncMessage.AddWallEntry(mail,receiver,text,dhtNode)
-              }).get()
-            }
+            case AddToWallCommand(receiver, text) =>
+              new GetPathByMail(receiver, dhtNode,{
+               case Some(receiverPath: String) =>
+                 services.GetPeerRef(context, receiverPath) ! AddWallEntry(mail,text)
+               case None => AsyncMessage.AddWallEntry(mail,receiver,text,dhtNode)
+             }).get()
 
-            case AddOfflineMessage(receiver, text, ack) => {
+            case AddOfflineMessage(receiver, text, ack) =>
               AsyncMessage.add(mail, receiver, text, ack, dhtNode)
-            }
 
             // command the current peer to request a file
             case GetFileCommand(fileName, replyTo) => dhtNode.getAll(fileName,{

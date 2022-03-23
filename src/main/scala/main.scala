@@ -26,7 +26,7 @@ object Guardian {
      * @return ActorRef if exists, else None
      */
     def getPeerRefByGuardian(sender: String): Option[ActorRef[PeerMessage]] = {
-      val validSenders = peers.keys.filter(k => k.startsWith(s"'${sender}'"))
+      val validSenders = peers.keys.filter(k => k.startsWith(s"'$sender'"))
       if (validSenders.isEmpty) {
         None
       } else {
@@ -67,32 +67,30 @@ object Guardian {
               peers.remove(GetPeerKey(user, location))
               println("Logout successful")
             case _ =>
-              println(s"User ${user} currently unavailable")
+              println(s"User $user currently unavailable")
           }
 
         /**
          * 1. if any location of receiver is found active/online, send message
          * 2. if not, add to wall
          */
-        case SendMessage(sender: String, receiver: String, text: String) => {
+        case SendMessage(sender: String, receiver: String, text: String) =>
           val lookup = getPeerRefByGuardian(sender)
           lookup match {
             case Some(senderRef: ActorRef[PeerMessage]) =>
               senderRef ! PeerCmd(SendMessageCommand(receiver, text))
             case _ =>
-              println(s"Sender ${sender} currently unavailable")
+              println(s"Sender $sender currently unavailable")
           }
-        }
 
-        case AddWallByUser(sender: String, owner: String, text: String) =>  {
+        case AddWallByUser(sender: String, owner: String, text: String) =>
           val lookup = getPeerRefByGuardian(sender)
           lookup match {
             case Some(senderRef: ActorRef[PeerMessage]) =>
               senderRef ! PeerCmd(AddToWallCommand(owner,text))
             case _ =>
-              println(s"Owner ${owner} currently unavailable")
+              println(s"Owner $owner currently unavailable")
           }
-        }
 
         case RequestFileByUser(requester: String, responder: String, fileName: String, version: Int) =>
           val lookup = getPeerRefByGuardian(requester)
@@ -100,7 +98,7 @@ object Guardian {
             case Some(requesterRef: ActorRef[PeerMessage]) =>
               requesterRef ! PeerCmd(GetFileCommand(fileName,null))
             case _ =>
-              println(s"Peer ${requester } currently unavailable")
+              println(s"Peer $requester currently unavailable")
           }
 
         case _ => ()

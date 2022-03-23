@@ -8,6 +8,6 @@ object GetPeerKey {
    * @param location location string
    */
   def apply(user: String, location: String): String = {
-    s"'${user}'@${location}"
+    s"'$user'@$location"
   }
 }

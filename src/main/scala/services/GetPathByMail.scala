@@ -11,7 +11,7 @@ class GetPathByMail(val mail: String, val distributedDHT: DistributedDHT, val ca
    * @param mail mail to look up
    * @return path if exists, else None
    */
-  def get() {
+  def get(): Unit = {
     val hashedMail: String = Encrypt(mail)
     distributedDHT.getAll(hashedMail, onReceivedLookup)
   }
@@ -23,14 +23,13 @@ class GetPathByMail(val mail: String, val distributedDHT: DistributedDHT, val ca
         // filter an active or online locator info
         val validLocatorInfoList = value.filter(l => l.state == State.active || l.state == State.online)
         if (validLocatorInfoList.isEmpty) {
-          println(s"peer ${mail} not found by DHT")
+          println(s"peer $mail not found by DHT")
           callback(None)
         } else {
           callback(Some(validLocatorInfoList.head.path))
         }
-      case _ => {
+      case _ =>
         callback(None)
-      }
     }
   }
 }

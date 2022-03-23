@@ -12,7 +12,7 @@ object AsyncMessage {
   case class OfflineMessage(sender: String, content: String, ack: Boolean)
 
   def load(context: ActorContext[PeerMessage], owner: String, dht: DHT): Unit = {
-    println(s"loading async messages of ${owner}")
+    println(s"loading async messages of $owner")
     val offMsgKey: String = getKey(owner)
     dht.contains(offMsgKey, { res =>
       if (res) {
@@ -23,7 +23,7 @@ object AsyncMessage {
               println(s"Loading offline message... $msg")
               context.self ! Notification(msg)
             })
-          case _ => println(s"offline messages under ${offMsgKey} not found")
+          case _ => println(s"offline messages under $offMsgKey not found")
         })
       } else {
         println(s"No asynchronous message for $owner")
@@ -33,7 +33,7 @@ object AsyncMessage {
   }
 
   def getKey(owner: String): String = {
-    s"${owner}@no"
+    s"$owner@no"
   }
 
   def AddWallEntry(sender: String, receiver: String, entryText: String, dht: DHT): Unit = {

@@ -1,6 +1,6 @@
 package dht
 
-import net.tomp2p.dht.{FutureGet, PeerBuilderDHT, PeerDHT}
+import net.tomp2p.dht.{PeerBuilderDHT, PeerDHT}
 import net.tomp2p.futures.{BaseFuture, BaseFutureAdapter, FutureBootstrap}
 import net.tomp2p.p2p.PeerBuilder
 import net.tomp2p.peers.Number160
@@ -21,13 +21,13 @@ class DistributedDHT(nodeId: Int) extends DHT {
 
 
   // METHODS FOR RETRIEVING FROM DHT
-  override def get(key: String, callback: Option[Any] => Unit) = {
+  override def get(key: String, callback: Option[Any] => Unit): Unit = {
     val futureGet = peer.get(Number160.createHash(key)).start
 
     futureGet.addListener(new BaseFutureAdapter[BaseFuture] {
 
       override def operationComplete(future: BaseFuture): Unit = {
-        if(future.isSuccess() && !futureGet.dataMap.values.isEmpty) {
+        if(future.isSuccess && !futureGet.dataMap.values.isEmpty) {
           callback(Some(futureGet.dataMap.values.iterator.next.`object`()))
         } else {
           callback(null)
@@ -37,14 +37,14 @@ class DistributedDHT(nodeId: Int) extends DHT {
       })
   }
 
-  override def getAll(key: String, callback: Option[List[Any]] => Unit) {
+  override def getAll(key: String, callback: Option[List[Any]] => Unit): Unit = {
 
     val futureGet = peer.get(Number160.createHash(key)).start
 
     futureGet.addListener(new BaseFutureAdapter[BaseFuture] {
 
       override def operationComplete(future: BaseFuture): Unit = {
-        if(future.isSuccess() && !futureGet.dataMap().values().isEmpty) {
+        if(future.isSuccess && !futureGet.dataMap().values().isEmpty) {
           val value = futureGet.dataMap.values.iterator.next.`object`()
           value match {
             case v@List(xs) => callback(Some(v))
@@ -59,13 +59,13 @@ class DistributedDHT(nodeId: Int) extends DHT {
     })
   }
 
-  override def contains(key: String, callback: Boolean => Unit) = {
+  override def contains(key: String, callback: Boolean => Unit): Unit = {
     val futureGet = peer.get(Number160.createHash(key)).start
 
     futureGet.addListener(new BaseFutureAdapter[BaseFuture] {
 
       override def operationComplete(future: BaseFuture): Unit = {
-        if(future.isSuccess()) {
+        if(future.isSuccess) {
           if (futureGet.isEmpty) {
 //            println("contains - success, but empty")
             callback(false)

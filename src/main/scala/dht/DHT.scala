@@ -12,12 +12,12 @@ trait DHT {
    * retrieves the head of data list by key
    * if key not existed, return None
    */
-  def get(key: String, callback: Option[Any] => Unit)
+  def get(key: String, callback: Option[Any] => Unit): Unit
 
   /**
    * check if the DHT contains a certain key
    */
-  def contains(key: String, callback: Boolean => Unit)
+  def contains(key: String, callback: Boolean => Unit): Unit
 
   /**
    * update the data list with a new item under a key
@@ -27,7 +27,7 @@ trait DHT {
   /**
    * retrieves all values stored in a data list under a key
    */
-  def getAll(key: String, callback: Option[List[Any]] => Unit)
+  def getAll(key: String, callback: Option[List[Any]] => Unit): Unit
 
   /**
    * remove a key-value pair

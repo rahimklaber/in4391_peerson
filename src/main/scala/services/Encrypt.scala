@@ -18,6 +18,6 @@ object Encrypt {
     val digest = MessageDigest
       .getInstance("SHA-256")
       .digest(value.getBytes("UTF-8"))
-    String.format("%064x", new BigInteger(1, digest));
+    String.format("%064x", new BigInteger(1, digest))
   }
 }

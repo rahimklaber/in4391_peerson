@@ -7,11 +7,11 @@ import java.net.URL
 
 class LoginProcedure(val location: String, val hashedMail: String, val path: String, val DistributedDHT: DistributedDHT, callback: () => Unit) {
 
-  def start() = {
+  def start(): Unit = {
     DistributedDHT.contains(hashedMail, recievedContains)
   }
 
-  def recievedContains(contains: Boolean) ={
+  def recievedContains(contains: Boolean): Unit ={
     if (contains) {
       login()
     } else {
@@ -24,12 +24,12 @@ class LoginProcedure(val location: String, val hashedMail: String, val path: Str
    * @param location location in string, say "laptop", "home"
    * @param hashedMail hashedMail
    */
-  def login() = {
+  def login(): Unit = {
     // 1. get user info from the DHT
     DistributedDHT.getAll(hashedMail, receivedUserInfo)
   }
 
-  def receivedUserInfo(userLocatorInfos: Option[List[Any]]) ={
+  def receivedUserInfo(userLocatorInfos: Option[List[Any]]): Unit ={
     var locationInfoList: List[LocatorInfo] = userLocatorInfos match {
       case Some(value) => value.asInstanceOf[List[LocatorInfo]]
       case None => throw new Exception()  // TODO: handle error

@@ -3,13 +3,12 @@ package peer
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import logic.async_messages.AsyncMessage
-import file.{File, FileOperations}
 import logic.async_messages.AsyncMessage.OfflineMessage
 import dht.DistributedDHT
-import file.FileOperations.DHTFileEntry
+import logic.wall.FileOperations.DHTFileEntry
 import logic.login.{LocatorInfo, LoginProcedure, LogoutProcedure, State}
 import logic.wall.Wall.WallEntry
-import logic.wall.Wall
+import logic.wall.{File, FileOperations, Wall}
 import services.{Encrypt, GetPathByMail, GetPeerRef}
 
 import scala.collection.mutable

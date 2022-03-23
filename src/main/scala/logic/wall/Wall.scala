@@ -2,7 +2,6 @@ package logic.wall
 
 import akka.actor.typed.scaladsl.ActorContext
 import dht.DHT
-import file.File
 import peer.{Message, PeerMessage}
 import services.Encrypt
 

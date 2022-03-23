@@ -1,4 +1,4 @@
-package file
+package logic.wall
 
 import logic.login.LocatorInfo
 

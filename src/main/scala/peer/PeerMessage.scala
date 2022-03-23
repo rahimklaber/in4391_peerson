@@ -1,7 +1,7 @@
 package peer
 
 import akka.actor.typed.ActorRef
-import file.File
+import logic.wall.File
 
 trait PeerMessage
 

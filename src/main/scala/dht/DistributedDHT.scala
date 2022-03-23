@@ -27,7 +27,7 @@ class DistributedDHT(nodeId: Int) extends DHT {
     futureGet.addListener(new BaseFutureAdapter[BaseFuture] {
 
       override def operationComplete(future: BaseFuture): Unit = {
-        if(future.isSuccess()) {
+        if(future.isSuccess() && !futureGet.dataMap.values.isEmpty) {
           callback(Some(futureGet.dataMap.values.iterator.next.`object`()))
         } else {
           callback(null)
@@ -44,7 +44,7 @@ class DistributedDHT(nodeId: Int) extends DHT {
     futureGet.addListener(new BaseFutureAdapter[BaseFuture] {
 
       override def operationComplete(future: BaseFuture): Unit = {
-        if(future.isSuccess()) {
+        if(future.isSuccess() && !futureGet.dataMap().values().isEmpty) {
           val value = futureGet.dataMap.values.iterator.next.`object`()
           value match {
             case v@List(xs) => callback(Some(v))

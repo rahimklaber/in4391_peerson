@@ -26,8 +26,7 @@ object AsyncMessage {
           case _ => println(s"offline messages under ${offMsgKey} not found")
         })
       } else {
-        println(res)
-        println(s"key $offMsgKey not found in dht")
+        println(s"No asynchronous message for $owner")
       }
       dht.put(offMsgKey, mutable.ListBuffer.empty[OfflineMessage])
     })

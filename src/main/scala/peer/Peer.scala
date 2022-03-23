@@ -95,8 +95,6 @@ object Peer {
               case _ =>
                 AsyncMessage.add(mail, sender, "I got your message", ack = true, dhtNode)
             }).get()
-//            val send = new SendChatMessage(context, sender, mail, "I got your message", ack = true, dhtNode)
-//            send.send()
           }
 
         case Login(location, path) =>

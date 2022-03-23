@@ -18,7 +18,7 @@ object Guardian {
      */
     val peers: mutable.Map[String, ActorRef[PeerMessage]] = mutable.Map()
 
-    var counter = 3
+    var counter = 2
     var dht : DHT = null // for wall add
     /**
      * get ActorRef if the message sender is now active/online

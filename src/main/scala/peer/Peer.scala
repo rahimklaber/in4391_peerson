@@ -47,10 +47,10 @@ object Peer {
     }
 
 
-    val WALL_INDEX_KEY = s"${hashedMail}@wi"
+    val WALL_INDEX_KEY = s"$hashedMail@wi"
 
 
-    var wallIndex = PeerWall.WallIndex(hashedMail, -1, ListBuffer.empty)
+    var wallIndex: PeerWall.WallIndex = PeerWall.WallIndex(hashedMail, -1, ListBuffer.empty)
 
     // the peer location, e.g., home / phone
     var location : String =""
@@ -81,9 +81,8 @@ object Peer {
     override def onMessage(msg: PeerMessage): Behavior[PeerMessage] = {
       context.log.info(s"$mail - received message: $msg")
       msg match {
-        case AddWallEntry(sender,text) => {
+        case AddWallEntry(sender,text) =>
           addToWall(sender,text)
-        }
         case Message(sender, text, ack) =>
           if (ack) {
             context.log.info(s"$sender send an ack")
@@ -162,14 +161,12 @@ object Peer {
             case _ => ()
           }
 
-        case Notification(content) => {
+        case Notification(content) =>
           content match {
-            case OfflineMessage(sender: String, content: String, ack: Boolean) => {
+            case OfflineMessage(sender: String, content: String, ack: Boolean) =>
               context.self ! Message(sender, content, ack)
-            }
             case WallEntry(_,sender,content) => addToWall(sender,content)
           }
-        }
       }
       this
     }

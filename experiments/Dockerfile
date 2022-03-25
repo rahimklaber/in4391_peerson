@@ -80,9 +80,11 @@ RUN \
 ## -w /home/sbtuser
 WORKDIR /root  
 
-EXPOSE 4000
-
-EXPOSE 4001
+EXPOSE 6122/udp
+EXPOSE 6122/tcp
+EXPOSE 5001/udp
+EXPOSE 5001/tcp
+EXPOSE 5000/tcp
 
 WORKDIR /home/sbtuser/project
 

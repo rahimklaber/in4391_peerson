@@ -8,7 +8,9 @@ To start the application run in this folder the command:
 
 `docker run -it peerson /bin/bash`
 
-`sbt run`
+`current_ip=$(curl ifconfig.me)`
+
+`sbt run current_ip`
 
 Possible commands for the guardian:
 

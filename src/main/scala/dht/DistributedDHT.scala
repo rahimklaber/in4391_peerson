@@ -7,16 +7,25 @@ import net.tomp2p.peers.Number160
 import net.tomp2p.storage.Data
 
 import java.net.InetAddress
+import scala.util.Random
 
 class DistributedDHT(nodeId: Int) extends DHT {
 
   // create a new DHT node
-  val peer: PeerDHT = new PeerBuilderDHT(new PeerBuilder(Number160.createHash(nodeId)).ports(4000 + nodeId).start).start
+  val p2p = new PeerBuilder(Number160.createHash(Random.nextLong()))
+//    .behindFirewall()
+    .ports(5000).start
+  val fd = p2p.discover().inetAddress(InetAddress.getByName("150.230.20.128")).ports(5000).start()
+  fd.awaitUninterruptibly()
+
+  println(s"address = ${fd.peerAddress()}")
 
   // connect to a stable DHT node
-  val fb: FutureBootstrap = this.peer.peer.bootstrap.inetAddress(InetAddress.getByName("127.0.0.1")).ports(4001).start
-  fb.awaitUninterruptibly
-  if (fb.isSuccess) peer.peer.discover.peerAddress(fb.bootstrapTo.iterator.next).start.awaitUninterruptibly
+//  val fb: FutureBootstrap = this.peer.peer.bootstrap.inetAddress(InetAddress.getByName("150.230.20.128")).ports(5000).start
+  val fb: FutureBootstrap = p2p.bootstrap.peerAddress(fd.peerAddress()).start
+    fb.awaitUninterruptibly
+//    if (fb.isSuccess) peer.peer.discover.peerAddress(fb.bootstrapTo.iterator.next).start.awaitUninterruptibly
+  val peer: PeerDHT = new PeerBuilderDHT(p2p).start
 
 
 

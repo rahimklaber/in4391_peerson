@@ -119,6 +119,9 @@ object main extends App {
   }
 
   UPnP.openPortTCP(25520)
+  UPnP.openPortTCP(5001)
+  UPnP.openPortUDP(5000)
+  UPnP.openPortTCP(5000)
 
   println(UPnP.getExternalIP)
   val guardian = setupGuardian(isRemote)

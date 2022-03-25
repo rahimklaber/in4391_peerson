@@ -118,7 +118,8 @@ object main extends App {
     isRemote = true
   }
 
-  UPnP.openPortTCP(25520)
+  UPnP.openPortTCP(6122)
+  UPnP.openPortUDP(6122)
   UPnP.openPortTCP(5001)
   UPnP.openPortUDP(5000)
   UPnP.openPortTCP(5000)

@@ -18,7 +18,7 @@ object Guardian {
      */
     val peers: mutable.Map[String, ActorRef[PeerMessage]] = mutable.Map()
 
-    var counter = 2
+    var counter = 1
     var dht : DHT = null // for wall add
     /**
      * get ActorRef if the message sender is now active/online
@@ -118,8 +118,6 @@ object main extends App {
   }
 
   val guardian = setupGuardian(isRemote)
-  println(guardian.path)
-  println(guardian.address)
 
   while (true) {
     println("Guardian waits for your command")

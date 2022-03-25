@@ -44,10 +44,6 @@ object Peer {
     val WALL_INDEX_KEY = s"$hashedMail@wi"
     var wallIndex: PeerWall.WallIndex = PeerWall.WallIndex(hashedMail, -1, ListBuffer.empty)
 
-    def onLoginSuccess(): Unit ={
-      println("Login successful")
-    }
-
     /**
      *
      * @param sender the hashed mail of the person who added the entry.
@@ -96,7 +92,7 @@ object Peer {
           AsyncMessage.load(context, mail, dhtNode)
           this.location = location
           this.path = path
-          val loginProcedure = new LoginProcedure(location, hashedMail, path, dhtNode, onLoginSuccess)
+          val loginProcedure = new LoginProcedure(location, hashedMail, path, dhtNode)
           loginProcedure.start()
 
 

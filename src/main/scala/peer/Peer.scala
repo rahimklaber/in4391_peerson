@@ -146,12 +146,18 @@ object Peer {
 
             // command the current peer to request a file
             case GetFileCommand(fileName, replyTo) =>
-              val realFileName = fileName.dropRight(3)
-              val a = Encrypt(realFileName) + "@wi"
-              dhtNode.getAll(a,{
+              var fileNameInDHT = fileName
+
+              // wall index is hashed
+              val extension = fileName.takeRight(3)
+              if (extension == "@wi"){
+                val realFileName = fileName.dropRight(3)
+                fileNameInDHT = Encrypt(realFileName) + "@wi"
+              }
+              dhtNode.getAll(fileNameInDHT,{
                 case Some(FileOperations.DHTFileEntry(hashedMail, path, version)::xs) =>
                   // actor classic kinda screws up. Instead just send a file request and then handle in explicitly
-                  services.GetPeerRef(context, path.path) ! FileRequest(a, version, context.self)
+                  services.GetPeerRef(context, path.path) ! FileRequest(fileNameInDHT, version, context.self)
             })
 
 

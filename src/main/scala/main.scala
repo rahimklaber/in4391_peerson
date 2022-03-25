@@ -1,5 +1,6 @@
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
+import com.simtechdata.waifupnp.UPnP
 import dht.{DHT, DistributedDHT}
 import peer.{AddToWallCommand, GetFileCommand, PeerCmd, PeerMessage, SendMessageCommand}
 
@@ -117,7 +118,11 @@ object main extends App {
     isRemote = true
   }
 
+  UPnP.openPortTCP(25520)
+
+  println(UPnP.getExternalIP)
   val guardian = setupGuardian(isRemote)
+
 
   while (true) {
     println("Guardian waits for your command")

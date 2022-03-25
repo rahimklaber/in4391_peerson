@@ -23,6 +23,8 @@ class LogoutProcedure(val location: String, val hashedMail: String, val Distribu
           LocatorInfo(l.locator, l.IP, l.port, newState, l.path)
         })
         DistributedDHT.put(hashedMail, updateUserInfo)
+        println("Current user data:")
+        println(updateUserInfo)
 
       case _ => println(s"user not found by DHT!")
     }

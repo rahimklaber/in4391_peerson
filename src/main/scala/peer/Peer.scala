@@ -57,6 +57,9 @@ object Peer {
 
       // increment index
       localFiles.put(WALL_INDEX_KEY, wallIndex.copy(lastIndex = newIndex))
+
+      localFiles.put(WALL_INDEX_KEY, wallIndex)
+      dhtNode.append(WALL_INDEX_KEY, DHTFileEntry(hashedMail, LocatorInfo(location,"","",State.active,path), 0)) // for now assume not versioning
     }
 
 
@@ -142,10 +145,13 @@ object Peer {
 
 
             // command the current peer to request a file
-            case GetFileCommand(fileName, replyTo) => dhtNode.getAll(fileName,{
-              case Some(FileOperations.DHTFileEntry(hashedMail, path, version)::xs) =>
-                // actor classic kinda screws up. Instead just send a file request and then handle in explicitly
-                services.GetPeerRef(context, path.path) ! FileRequest(fileName, version, context.self)
+            case GetFileCommand(fileName, replyTo) =>
+              val realFileName = fileName.dropRight(3)
+              val a = Encrypt(realFileName) + "@wi"
+              dhtNode.getAll(a,{
+                case Some(FileOperations.DHTFileEntry(hashedMail, path, version)::xs) =>
+                  // actor classic kinda screws up. Instead just send a file request and then handle in explicitly
+                  services.GetPeerRef(context, path.path) ! FileRequest(a, version, context.self)
             })
 
 

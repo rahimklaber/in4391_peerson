@@ -55,6 +55,8 @@ You can then run some possible commands to send to the guardian, which works as 
 - `add-to-wall`
   - Guardian asks for sender, receiver and text to send and adds the text to the users wall.
 - `request-wall`
-  - Guardian asks for the user requesting, the file name and sends the newest version of the wall.
+  - Guardian asks for the user requesting, the file name and sends the file back.
+  - To be able to fetch entries of some user's wall, a user should first request the wall index file of that user which contains all the file names of the individual entries.
+  - The file name of a user's wall index is in the form email@wi.
 - `exit`
   - Exit the interface

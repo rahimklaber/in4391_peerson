@@ -20,13 +20,13 @@ case class Message(sender: String, text: String, ack: Boolean, id : Long = -1L) 
 case class AddWallEntry(sender:String,text: String) extends PeerMessage
 
 // for now assume version == 0
-case class FileRequest(fileName: String, version: Int, replyTo: ActorRef[PeerMessage]) extends PeerMessage
+case class FileRequest(fileName: String, version: Int, replyTo: ActorRef[PeerMessage],id : Long = -1L) extends PeerMessage
 
 /**
  * @param code response code. Kinda like http response codes.
  */
 case class FileResponse(code: Int, fileName: String, version: Int,
-                        file: Option[File], from: ActorRef[PeerMessage]) extends PeerMessage
+                        file: Option[File], from: ActorRef[PeerMessage],id : Long = -1L) extends PeerMessage
 
 /**
  * for sending commands to the peer

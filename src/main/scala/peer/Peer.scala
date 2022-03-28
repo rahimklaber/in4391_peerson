@@ -65,9 +65,9 @@ object Peer {
     /**
      * Timestamps of when we sent a message
      */
-    val messageTimestamps = mutable.Map[Long,Long]()
+    val timeStamps = mutable.Map[Long,Long]()
     // for keeping track of message timestamps
-    var currentMsgId = 0L
+    var currentTimeStampId = 0L
 
     /**
      * message handler
@@ -84,10 +84,10 @@ object Peer {
 
         case Message(sender, text, ack,id) =>
           if (ack) {
-            messageTimestamps.get(id) match {
+            timeStamps.get(id) match {
               case Some(value) => {
                 context.log.info(s"$sender sent an ack")
-                context.log.info(s"Message sent and received ack with latency : ${(System.currentTimeMillis() - messageTimestamps(id))/1000.0}")
+                context.log.info(s"Message sent and received ack with latency : ${(System.currentTimeMillis() - timeStamps(id))/1000.0}")
               }
               case _ => context.log.info("got ack for message we don't know about.")
             }
@@ -116,17 +116,21 @@ object Peer {
           logoutProcedure.start()
 
 
-        case FileRequest(fileName, version, replyTo) =>
+        case FileRequest(fileName, version, replyTo,id) =>
           localFiles.get(fileName) match {
             case Some(value) if value.isInstanceOf[File] =>
-              replyTo ! FileResponse(200, fileName, version, Some(value), context.self)
+              replyTo ! FileResponse(200, fileName, version, Some(value), context.self,id)
             case Some(_) => ()
-            case None => replyTo ! FileResponse(404, fileName, version, None, context.self)
+            case None => replyTo ! FileResponse(404, fileName, version, None, context.self,id)
           }
 
 
         // If we get a response, store it locally.
-        case FileResponse(code, fileName, version, received, from) =>
+        case FileResponse(code, fileName, version, received, from, id) =>
+          timeStamps.get(id) match {
+            case Some(value) =>  context.log.info(s"File response received in : ${(System.currentTimeMillis() - timeStamps(id))/1000.0}")
+            case _ => context.log.info("got a response for request we don't know about")
+          }
             if (code == 200){
               received match {
                 case Some(file) =>
@@ -166,13 +170,18 @@ object Peer {
                 val realFileName = fileName.dropRight(3)
                 fileNameInDHT = Encrypt(realFileName) + "@wi"
               }
+              val id = currentTimeStampId
+              currentTimeStampId +=1
+              timeStamps.put(id,System.currentTimeMillis())
+
+
               dhtNode.getAll(fileNameInDHT, { case Some(l: List[DHTFileEntry]) =>
                 var found = false
                 for (e <- l) {
                   CheckIfOnlineWithLocation(dhtNode, e.hashedMail, e.locator, { foundPath =>
                     if (!found) {
                       found = true
-                      GetPeerRef(context, foundPath) ! FileRequest(fileNameInDHT, 0, context.self)
+                      GetPeerRef(context, foundPath) ! FileRequest(fileNameInDHT, 0, context.self,id)
                     }
                   })
                 }
@@ -184,9 +193,9 @@ object Peer {
             case SendMessageCommand(receiver, text) =>
               new GetPathByMail(receiver,dhtNode,{
                 case Some(receiverPath: String) =>
-                  val id = currentMsgId
-                  currentMsgId +=1
-                  messageTimestamps.put(id,System.currentTimeMillis())
+                  val id = currentTimeStampId
+                  currentTimeStampId +=1
+                  timeStamps.put(id,System.currentTimeMillis())
                   services.GetPeerRef(context, receiverPath) ! Message(mail, text, ack = false, id = id)
                 case _ =>
                   context.self ! PeerCmd(AddOfflineMessage(receiver, text, ack = false))

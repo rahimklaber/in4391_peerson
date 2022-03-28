@@ -5,7 +5,7 @@ import dht.DistributedDHT
 import java.io.{BufferedReader, InputStreamReader}
 import java.net.URL
 
-class LoginProcedure(val location: String, val hashedMail: String, val path: String, val DistributedDHT: DistributedDHT) {
+class LoginProcedure(val location: String, val hashedMail: String, val path: String, val DistributedDHT: DistributedDHT, val startingTimestamp: Long) {
 
   def start(): Unit = {
     DistributedDHT.contains(hashedMail, recievedContains)
@@ -63,6 +63,7 @@ class LoginProcedure(val location: String, val hashedMail: String, val path: Str
     DistributedDHT.put(hashedMail, updateUserInfo)
     println("Current user data:")
     println(updateUserInfo)
+    println("Time elapsed: " + (System.currentTimeMillis() - startingTimestamp)/1000.0)
   }
 
   def register(): Unit = {
@@ -72,6 +73,7 @@ class LoginProcedure(val location: String, val hashedMail: String, val path: Str
     DistributedDHT.put(hashedMail, locatorInfo :: Nil)
     println("Current user data:")
     println(locatorInfo::Nil)
+    println("Time elapsed: " + (System.currentTimeMillis() - startingTimestamp)/1000.0)
   }
 
   def findIPAddress(): String = {

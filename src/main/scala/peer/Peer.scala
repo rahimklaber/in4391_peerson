@@ -57,8 +57,7 @@ object Peer {
 
       // increment index
       localFiles.put(WALL_INDEX_KEY, wallIndex.copy(lastIndex = newIndex))
-
-      localFiles.put(WALL_INDEX_KEY, wallIndex)
+      
       dhtNode.append(WALL_INDEX_KEY, DHTFileEntry(hashedMail, LocatorInfo(location,"","",State.active,path), 0)) // for now assume not versioning
     }
 
@@ -114,7 +113,6 @@ object Peer {
         case Logout(location) =>
           val logoutProcedure = new LogoutProcedure(location, hashedMail, dhtNode, System.currentTimeMillis())
           logoutProcedure.start()
-
 
         case FileRequest(fileName, version, replyTo,id) =>
           localFiles.get(fileName) match {

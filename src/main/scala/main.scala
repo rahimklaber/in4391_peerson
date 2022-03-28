@@ -47,8 +47,16 @@ object Guardian {
           }
 
           else {
+
+            val bootstrapHost = System.getenv("BOOTSTRAP")
+            if(bootstrapHost == null){
+              context.log.info("BOOTSTRAP not set")
+            }else{
+              context.log.info(s"BOOTSTRAP node is : ${bootstrapHost}")
+            }
+
             // create a dht node for new peer
-            val dhtNode: DistributedDHT = new DistributedDHT(counter)
+            val dhtNode: DistributedDHT = new DistributedDHT(counter,bootstrapHost)
             dht = dhtNode
             counter = counter + 1
             // create a new peer

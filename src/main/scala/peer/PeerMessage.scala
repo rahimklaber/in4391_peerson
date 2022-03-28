@@ -3,7 +3,9 @@ package peer
 import akka.actor.typed.ActorRef
 import logic.wall.File
 
-trait PeerMessage
+trait PeerMessage{
+  val timeStamp: Long = System.currentTimeMillis()
+}
 
 /**
  * PeerMessage
@@ -21,7 +23,6 @@ case class AddWallEntry(sender:String,text: String) extends PeerMessage
 
 // for now assume version == 0
 case class FileRequest(fileName: String, version: Int, replyTo: ActorRef[PeerMessage]) extends PeerMessage
-
 /**
  * @param code response code. Kinda like http response codes.
  */

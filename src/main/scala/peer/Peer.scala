@@ -79,9 +79,10 @@ object Peer {
 
         case Message(sender, text, ack) =>
           if (ack) {
-            context.log.info(s"$sender send an ack")
+            context.log.info(s"$sender sent an ack")
           } else {
             context.log.info(s"From: $sender | Message: $text")
+            context.log.info(s"Msg received with latency : ${(System.currentTimeMillis() -  msg.timeStamp) / 1000.0}")
             new GetPathByMail(sender, dhtNode,{
               case Some(senderPath: String) =>
                 GetPeerRef(context, senderPath) ! Message(mail, "I got your message", ack = true)
@@ -118,6 +119,7 @@ object Peer {
             if (code == 200){
               received match {
                 case Some(file) =>
+                  context.log.info("we received a response for our file request, storing and advertising the file...")
                   // store file locally and advertise it as well
                   localFiles.put(fileName, file)
                   dhtNode.append(fileName, DHTFileEntry(hashedMail, LocatorInfo(location,"","",State.active,path), 0))

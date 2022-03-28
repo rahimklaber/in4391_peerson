@@ -9,7 +9,7 @@ import logic.wall.FileOperations.DHTFileEntry
 import logic.login.{LocatorInfo, LoginProcedure, LogoutProcedure, State}
 import logic.wall.Wall.WallEntry
 import logic.wall.{File, FileOperations, Wall}
-import services.{Encrypt, GetPathByMail, GetPeerRef}
+import services.{CheckIfOnlineWithLocation, Encrypt, GetPathByMail, GetPeerRef}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -151,12 +151,18 @@ object Peer {
                 val realFileName = fileName.dropRight(3)
                 fileNameInDHT = Encrypt(realFileName) + "@wi"
               }
-              dhtNode.getAll(fileNameInDHT,{
-                case Some(FileOperations.DHTFileEntry(hashedMail, path, version)::xs) =>
-                  // actor classic kinda screws up. Instead just send a file request and then handle in explicitly
-                  services.GetPeerRef(context, path.path) ! FileRequest(fileNameInDHT, version, context.self)
-                case None => println(s"The file ${fileNameInDHT} could not be found.")
-            })
+              dhtNode.getAll(fileNameInDHT, { case Some(l: List[DHTFileEntry]) =>
+                var found = false
+                for (e <- l) {
+                  CheckIfOnlineWithLocation(dhtNode, e.hashedMail, e.locator, { foundPath =>
+                    if (!found) {
+                      found = true
+                      GetPeerRef(context, foundPath) ! FileRequest(fileNameInDHT, 0, context.self)
+                    }
+                  })
+                }
+              case None => println(s"The file ${fileNameInDHT} could not be found.")
+              })
 
 
             // command the current peer to send message

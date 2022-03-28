@@ -1,6 +1,6 @@
-package userData
+package logic.login
 
-import userData.State.State
+import logic.login.State.State
 
 case class LocatorInfo(
                         locator: String, // a string defined by user, to tell on which machine the user is currently active

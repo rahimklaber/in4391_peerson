@@ -1,4 +1,4 @@
-package dht
+package logic.wall
 
 /**
  * a trait to represent the file in communication

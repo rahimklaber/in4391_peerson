@@ -1,33 +1,42 @@
 package dht
 
-import net.tomp2p.dht.{FutureGet, PeerBuilderDHT, PeerDHT}
+import net.tomp2p.dht.{PeerBuilderDHT, PeerDHT}
 import net.tomp2p.futures.{BaseFuture, BaseFutureAdapter, FutureBootstrap}
 import net.tomp2p.p2p.PeerBuilder
 import net.tomp2p.peers.Number160
 import net.tomp2p.storage.Data
 
 import java.net.InetAddress
+import scala.util.Random
 
 class DistributedDHT(nodeId: Int) extends DHT {
 
   // create a new DHT node
-  val peer: PeerDHT = new PeerBuilderDHT(new PeerBuilder(Number160.createHash(nodeId)).ports(4000 + nodeId).start).start
+  val p2p = new PeerBuilder(Number160.createHash(Random.nextLong()))
+//    .behindFirewall()
+    .ports(5000).start
+  val fd = p2p.discover().inetAddress(InetAddress.getByName("150.230.20.128")).ports(5000).start()
+  fd.awaitUninterruptibly()
+
+  println(s"address = ${fd.peerAddress()}")
 
   // connect to a stable DHT node
-  val fb: FutureBootstrap = this.peer.peer.bootstrap.inetAddress(InetAddress.getByName("127.0.0.1")).ports(4001).start
-  fb.awaitUninterruptibly
-  if (fb.isSuccess) peer.peer.discover.peerAddress(fb.bootstrapTo.iterator.next).start.awaitUninterruptibly
+//  val fb: FutureBootstrap = this.peer.peer.bootstrap.inetAddress(InetAddress.getByName("150.230.20.128")).ports(5000).start
+  val fb: FutureBootstrap = p2p.bootstrap.peerAddress(fd.peerAddress()).start
+    fb.awaitUninterruptibly
+//    if (fb.isSuccess) peer.peer.discover.peerAddress(fb.bootstrapTo.iterator.next).start.awaitUninterruptibly
+  val peer: PeerDHT = new PeerBuilderDHT(p2p).start
 
 
 
   // METHODS FOR RETRIEVING FROM DHT
-  override def get(key: String, callback: Option[Any] => Unit) = {
+  override def get(key: String, callback: Option[Any] => Unit): Unit = {
     val futureGet = peer.get(Number160.createHash(key)).start
 
     futureGet.addListener(new BaseFutureAdapter[BaseFuture] {
 
       override def operationComplete(future: BaseFuture): Unit = {
-        if(future.isSuccess()) {
+        if(future.isSuccess && !futureGet.dataMap.values.isEmpty) {
           callback(Some(futureGet.dataMap.values.iterator.next.`object`()))
         } else {
           callback(null)
@@ -37,17 +46,17 @@ class DistributedDHT(nodeId: Int) extends DHT {
       })
   }
 
-  override def getAll(key: String, callback: Option[List[Any]] => Unit) {
+  override def getAll(key: String, callback: Option[List[Any]] => Unit): Unit = {
 
     val futureGet = peer.get(Number160.createHash(key)).start
 
     futureGet.addListener(new BaseFutureAdapter[BaseFuture] {
 
       override def operationComplete(future: BaseFuture): Unit = {
-        if(future.isSuccess()) {
+        if(future.isSuccess && !futureGet.dataMap().values().isEmpty) {
           val value = futureGet.dataMap.values.iterator.next.`object`()
           value match {
-            case v@List(xs) => callback(Some(v))
+            case v : List[Any] => callback(Some(v))
             case v@_ =>
               callback(None)
           }
@@ -59,22 +68,19 @@ class DistributedDHT(nodeId: Int) extends DHT {
     })
   }
 
-  override def contains(key: String, callback: Boolean => Unit) = {
+  override def contains(key: String, callback: Boolean => Unit): Unit = {
     val futureGet = peer.get(Number160.createHash(key)).start
 
     futureGet.addListener(new BaseFutureAdapter[BaseFuture] {
 
       override def operationComplete(future: BaseFuture): Unit = {
-        if(future.isSuccess()) {
+        if(future.isSuccess) {
           if (futureGet.isEmpty) {
-//            println("contains - success, but empty")
             callback(false)
           } else {
-//            println("contains - success")
             callback(true)
           }
         } else {
-//          println("contains - not success")
           callback(false)
         }
       }
@@ -97,7 +103,8 @@ class DistributedDHT(nodeId: Int) extends DHT {
 
         val list = futureGet.dataMap.values.iterator.next.`object`()
         list match {
-          case l@List(xs) => put(key, data :: l)
+          case x :: xs => put(key, data :: (x :: xs))
+          case _ => println("Could not append to list in dht, because the entry in the dht is not a list.")
         }
       } else {
         put(key,data::Nil)

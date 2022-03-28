@@ -117,12 +117,9 @@ object Peer {
         case FileResponse(code, fileName, version, received, from) if code == 200 =>
           received match {
             case Some(file) =>
+              // store file locally and advertise it as well
               localFiles.put(fileName, file)
-
-              /**
-               * TODO (if time allows): replace context.self.path.toString to locator
-               */
-//              FileOperations.add(hashedMail, context.self.path.toString, 0, file,dhtNode)
+              dhtNode.append(fileName, DHTFileEntry(hashedMail, LocatorInfo(location,"","",State.active,path), 0))
             case None => ()
           }
 
@@ -158,6 +155,7 @@ object Peer {
                 case Some(FileOperations.DHTFileEntry(hashedMail, path, version)::xs) =>
                   // actor classic kinda screws up. Instead just send a file request and then handle in explicitly
                   services.GetPeerRef(context, path.path) ! FileRequest(fileNameInDHT, version, context.self)
+                case None => println(s"The file ${fileNameInDHT} could not be found.")
             })
 
 

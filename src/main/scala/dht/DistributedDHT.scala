@@ -103,7 +103,8 @@ class DistributedDHT(nodeId: Int) extends DHT {
 
         val list = futureGet.dataMap.values.iterator.next.`object`()
         list match {
-          case l@List(xs) => put(key, data :: l)
+          case x :: xs => put(key, data :: (x :: xs))
+          case _ => println("Could not append to list in dht, because the entry in the dht is not a list.")
         }
       } else {
         put(key,data::Nil)

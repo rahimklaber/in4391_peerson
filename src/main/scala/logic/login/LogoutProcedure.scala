@@ -2,7 +2,7 @@ package logic.login
 
 import dht.DistributedDHT
 
-class LogoutProcedure(val location: String, val hashedMail: String, val DistributedDHT: DistributedDHT) {
+class LogoutProcedure(val location: String, val hashedMail: String, val DistributedDHT: DistributedDHT, val startingTimestamp: Long) {
 
   def start(): Unit = {
     DistributedDHT.getAll(hashedMail, onReceivedLookup)
@@ -25,6 +25,7 @@ class LogoutProcedure(val location: String, val hashedMail: String, val Distribu
         DistributedDHT.put(hashedMail, updateUserInfo)
         println("Current user data:")
         println(updateUserInfo)
+        println("Time elapsed: " + (System.currentTimeMillis() - startingTimestamp)/1000.0)
 
       case _ => println(s"user not found by DHT!")
     }

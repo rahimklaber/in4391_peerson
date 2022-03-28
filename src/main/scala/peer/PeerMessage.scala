@@ -15,7 +15,7 @@ case class Login(location: String, path: String) extends PeerMessage
 // used for logout REPL command
 case class Logout(location: String) extends PeerMessage
 
-case class Message(sender: String, text: String, ack: Boolean) extends PeerMessage
+case class Message(sender: String, text: String, ack: Boolean, id : Long = -1L) extends PeerMessage
 
 case class AddWallEntry(sender:String,text: String) extends PeerMessage
 

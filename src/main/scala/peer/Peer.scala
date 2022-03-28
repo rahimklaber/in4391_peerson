@@ -62,6 +62,12 @@ object Peer {
       dhtNode.append(WALL_INDEX_KEY, DHTFileEntry(hashedMail, LocatorInfo(location,"","",State.active,path), 0)) // for now assume not versioning
     }
 
+    /**
+     * Timestamps of when we sent a message
+     */
+    val messageTimestamps = mutable.Map[Long,Long]()
+    // for keeping track of message timestamps
+    var currentMsgId = 0L
 
     /**
      * message handler
@@ -76,15 +82,21 @@ object Peer {
         case AddWallEntry(sender,text) =>
           addToWall(sender,text)
 
-
-        case Message(sender, text, ack) =>
+        case Message(sender, text, ack,id) =>
           if (ack) {
-            context.log.info(s"$sender send an ack")
+            messageTimestamps.get(id) match {
+              case Some(value) => {
+                context.log.info(s"$sender sent an ack")
+                context.log.info(s"Message sent and received ack with latency : ${(System.currentTimeMillis() - messageTimestamps(id))/1000.0}")
+              }
+              case _ => context.log.info("got ack for message we don't know about.")
+            }
+
           } else {
             context.log.info(s"From: $sender | Message: $text")
             new GetPathByMail(sender, dhtNode,{
               case Some(senderPath: String) =>
-                GetPeerRef(context, senderPath) ! Message(mail, "I got your message", ack = true)
+                GetPeerRef(context, senderPath) ! Message(mail, "I got your message", ack = true,id)
               case _ =>
                 AsyncMessage.add(mail, sender, "I got your message", ack = true, dhtNode)
             }).get()
@@ -95,12 +107,12 @@ object Peer {
           AsyncMessage.load(context, mail, dhtNode)
           this.location = location
           this.path = path
-          val loginProcedure = new LoginProcedure(location, hashedMail, path, dhtNode)
+          val loginProcedure = new LoginProcedure(location, hashedMail, path, dhtNode, System.currentTimeMillis())
           loginProcedure.start()
 
 
         case Logout(location) =>
-          val logoutProcedure = new LogoutProcedure(location, hashedMail, dhtNode)
+          val logoutProcedure = new LogoutProcedure(location, hashedMail, dhtNode, System.currentTimeMillis())
           logoutProcedure.start()
 
 
@@ -118,6 +130,7 @@ object Peer {
             if (code == 200){
               received match {
                 case Some(file) =>
+                  context.log.info("we received a response for our file request, storing and advertising the file...")
                   // store file locally and advertise it as well
                   localFiles.put(fileName, file)
                   dhtNode.append(fileName, DHTFileEntry(hashedMail, LocatorInfo(location,"","",State.active,path), 0))
@@ -171,7 +184,10 @@ object Peer {
             case SendMessageCommand(receiver, text) =>
               new GetPathByMail(receiver,dhtNode,{
                 case Some(receiverPath: String) =>
-                  services.GetPeerRef(context, receiverPath) ! Message(mail, text, ack = false)
+                  val id = currentMsgId
+                  currentMsgId +=1
+                  messageTimestamps.put(id,System.currentTimeMillis())
+                  services.GetPeerRef(context, receiverPath) ! Message(mail, text, ack = false, id = id)
                 case _ =>
                   context.self ! PeerCmd(AddOfflineMessage(receiver, text, ack = false))
               }).get()

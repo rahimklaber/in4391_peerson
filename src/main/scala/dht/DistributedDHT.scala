@@ -9,13 +9,13 @@ import net.tomp2p.storage.Data
 import java.net.InetAddress
 import scala.util.Random
 
-class DistributedDHT(nodeId: Int) extends DHT {
+class DistributedDHT(nodeId: Int,bootstrapHost : String) extends DHT {
 
   // create a new DHT node
   val p2p = new PeerBuilder(Number160.createHash(Random.nextLong()))
 //    .behindFirewall()
     .ports(5000).start
-  val fd = p2p.discover().inetAddress(InetAddress.getByName("150.230.20.128")).ports(5000).start()
+  val fd = p2p.discover().inetAddress(InetAddress.getByName(bootstrapHost)).ports(5000).start()
   fd.awaitUninterruptibly()
 
   println(s"address = ${fd.peerAddress()}")

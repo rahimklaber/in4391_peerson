@@ -62,6 +62,12 @@ object Peer {
       dhtNode.append(WALL_INDEX_KEY, DHTFileEntry(hashedMail, LocatorInfo(location,"","",State.active,path), 0)) // for now assume not versioning
     }
 
+    /**
+     * Timestamps of when we sent a message
+     */
+    val messageTimestamps = mutable.Map[Long,Long]()
+    // for keeping track of message timestamps
+    var currentMsgId = 0L
 
     /**
      * message handler
@@ -76,16 +82,15 @@ object Peer {
         case AddWallEntry(sender,text) =>
           addToWall(sender,text)
 
-
-        case Message(sender, text, ack) =>
+        case Message(sender, text, ack,id) =>
           if (ack) {
             context.log.info(s"$sender sent an ack")
+            context.log.info(s"Message sent and received ack with latency : ${(System.currentTimeMillis() - messageTimestamps(id))/1000.0}")
           } else {
             context.log.info(s"From: $sender | Message: $text")
-            context.log.info(s"Msg received with latency : ${(System.currentTimeMillis() -  msg.timeStamp) / 1000.0}")
             new GetPathByMail(sender, dhtNode,{
               case Some(senderPath: String) =>
-                GetPeerRef(context, senderPath) ! Message(mail, "I got your message", ack = true)
+                GetPeerRef(context, senderPath) ! Message(mail, "I got your message", ack = true,id)
               case _ =>
                 AsyncMessage.add(mail, sender, "I got your message", ack = true, dhtNode)
             }).get()
@@ -173,7 +178,10 @@ object Peer {
             case SendMessageCommand(receiver, text) =>
               new GetPathByMail(receiver,dhtNode,{
                 case Some(receiverPath: String) =>
-                  services.GetPeerRef(context, receiverPath) ! Message(mail, text, ack = false)
+                  val id = currentMsgId
+                  currentMsgId +=1
+                  messageTimestamps.put(id,System.currentTimeMillis())
+                  services.GetPeerRef(context, receiverPath) ! Message(mail, text, ack = false, id = id)
                 case _ =>
                   context.self ! PeerCmd(AddOfflineMessage(receiver, text, ack = false))
               }).get()

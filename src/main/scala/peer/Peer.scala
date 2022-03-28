@@ -107,12 +107,12 @@ object Peer {
           AsyncMessage.load(context, mail, dhtNode)
           this.location = location
           this.path = path
-          val loginProcedure = new LoginProcedure(location, hashedMail, path, dhtNode)
+          val loginProcedure = new LoginProcedure(location, hashedMail, path, dhtNode, System.currentTimeMillis())
           loginProcedure.start()
 
 
         case Logout(location) =>
-          val logoutProcedure = new LogoutProcedure(location, hashedMail, dhtNode)
+          val logoutProcedure = new LogoutProcedure(location, hashedMail, dhtNode, System.currentTimeMillis())
           logoutProcedure.start()
 
 

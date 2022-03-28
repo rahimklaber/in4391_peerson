@@ -84,8 +84,14 @@ object Peer {
 
         case Message(sender, text, ack,id) =>
           if (ack) {
-            context.log.info(s"$sender sent an ack")
-            context.log.info(s"Message sent and received ack with latency : ${(System.currentTimeMillis() - messageTimestamps(id))/1000.0}")
+            messageTimestamps.get(id) match {
+              case Some(value) => {
+                context.log.info(s"$sender sent an ack")
+                context.log.info(s"Message sent and received ack with latency : ${(System.currentTimeMillis() - messageTimestamps(id))/1000.0}")
+              }
+              case _ => context.log.info("got ack for message we don't know about.")
+            }
+
           } else {
             context.log.info(s"From: $sender | Message: $text")
             new GetPathByMail(sender, dhtNode,{

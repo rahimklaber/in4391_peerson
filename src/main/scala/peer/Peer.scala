@@ -114,13 +114,15 @@ object Peer {
 
 
         // If we get a response, store it locally.
-        case FileResponse(code, fileName, version, received, from) if code == 200 =>
-          received match {
-            case Some(file) =>
-              // store file locally and advertise it as well
-              localFiles.put(fileName, file)
-              dhtNode.append(fileName, DHTFileEntry(hashedMail, LocatorInfo(location,"","",State.active,path), 0))
-            case None => ()
+        case FileResponse(code, fileName, version, received, from) =>
+            if (code == 200){
+              received match {
+                case Some(file) =>
+                  // store file locally and advertise it as well
+                  localFiles.put(fileName, file)
+                  dhtNode.append(fileName, DHTFileEntry(hashedMail, LocatorInfo(location,"","",State.active,path), 0))
+                case None => ()
+            }
           }
 
 

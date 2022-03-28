@@ -4,13 +4,17 @@ Prerequisite:
 
 To start the application run in this folder the command:
 
-`docker build -t peerson .`
+Find your ip with: `curl ifconfig.me`
+
+The first node created will have the bootstrap ip with: `curl ifconfig.me`
+
+`docker build -t peerson .\ --build-arg buildtime_bootstrap=your_ip --build-arg buildtime_bootstrap=bootstrap_ip`
 
 `docker run -it peerson /bin/bash`
 
-`current_ip=$(curl ifconfig.me)`
+Check that the addresses are set correctly `echo host:$HOST bootstrap:$BOOTSTRAP`
 
-`sbt run current_ip`
+`sbt run`
 
 Possible commands for the guardian:
 

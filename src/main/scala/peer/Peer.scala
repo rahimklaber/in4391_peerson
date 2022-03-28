@@ -112,7 +112,7 @@ object Peer {
 
 
         case Logout(location) =>
-          val logoutProcedure = new LogoutProcedure(location, hashedMail, dhtNode)
+          val logoutProcedure = new LogoutProcedure(location, hashedMail, dhtNode, System.currentTimeMillis())
           logoutProcedure.start()
 
 

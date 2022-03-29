@@ -18,6 +18,12 @@ ENV USER_ID ${USER_ID:-1001}
 ARG GROUP_ID 
 ENV GROUP_ID ${GROUP_ID:-1001}
 
+ARG buildtime_host=80.114.141.221
+ENV HOST=$buildtime_host
+
+ARG buildtime_bootstrap=150.230.20.128
+ENV BOOTSTRAP=$buildtime_bootstrap
+
 # Install sbt
 RUN \
     curl -fsL "https://github.com/sbt/sbt/releases/download/v$SBT_VERSION/sbt-$SBT_VERSION.tgz" | tar xfz - -C /usr/share && \

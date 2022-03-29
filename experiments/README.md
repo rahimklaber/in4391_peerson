@@ -1,3 +1,5 @@
+! This does not work, you can start the system but, it throws an error when trying to send messages !
+
 Prerequisite:
 
 - Docker

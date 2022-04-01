@@ -30,10 +30,12 @@ the folder and at the bottom there should be an option called "Mark directory as
 
 ### Running the project
 
-Add your ip address in the ./src/main/resources/application.
-conf file in the canonical.hostname.
+Two environment variables need to be set. First `HOST` which is the computer's IP or the router's IP in the case that you are behind a NAT and want to use the application over the internet (This can be found by running `curl ifconfig.me`) . 
 
-(This can be found by running `curl ifconfig.me`)
+Second `BOOTSTRAP` needs to be set to the IP of a TOMP2P DHT which will bootstrap our DHT.
+
+To run a bootstrap node, use a dummy `HOST` value and set `BOOTSTRAP` to the computer's IP. Then login with a dummy name such as `BOOTSTRAPNODE`. The bootstrap node should now be ready.
+
 
 Depending on your system build/compile:
 
